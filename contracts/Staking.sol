@@ -10,24 +10,40 @@ import "hardhat/console.sol";
 contract Staking is Ownable {
     using SafeERC20 for IERC20;
 
+    uint256 private constant RATE_ACCURACY = 1 ether;
+
     address private immutable TST;
     address private immutable EUROs;
 
     uint256 public start;
+    uint256 private fees;
     uint256[] private starts;
-    mapping(address => Position) positions;
+    mapping(address => Position) public positions;
 
-    struct Position { uint256 start; }
+    struct Position { uint256 start; uint256 TST; uint256 EUROs; }
 
     constructor(address _tst, address _euros) Ownable(msg.sender) {
         TST = _tst;
         EUROs = _euros;
     }
 
-    function increaseStake(uint256 _tstAmount) external {
+    function dailyEuroPerTstRate() external view returns(uint256) {
+        uint256 stakingDays = (block.timestamp - start) / 1 days;
+        return fees > 0 && stakingDays > 0 ? RATE_ACCURACY * fees / IERC20(TST).balanceOf(address(this)) / stakingDays : 0;
+    }
+
+    function dropFees(uint256 _fees) external {
+        fees += _fees;
+    }
+
+    function increaseStake(uint256 _tst, uint256 _euros) external {
         if (start == 0) start = block.timestamp;
         starts.push(block.timestamp);
         positions[msg.sender].start = block.timestamp;
+        positions[msg.sender].TST += _tst;
+        positions[msg.sender].EUROs += _euros;
+        IERC20(TST).safeTransferFrom(msg.sender, address(this), _tst);
+        IERC20(EUROs).safeTransferFrom(msg.sender, address(this), _euros);
     }
 
     function deleteIndexFromStarts(uint256 _index) private {
@@ -52,8 +68,9 @@ contract Staking is Ownable {
         }
     }
 
-    function decreaseStake(uint256 _tstAmount) external {
+    function decreaseStake(uint256 _tstAmount, uint256 _eurosAmount) external {
         deleteStart(positions[msg.sender].start);
         start = earliestStart();
+        IERC20(TST).safeTransfer(msg.sender, _tstAmount);
     }
 }
