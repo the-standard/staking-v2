@@ -67,10 +67,22 @@ contract Staking is Ownable {
             if (_start == 0 || starts[i] < _start) _start = starts[i];
         }
     }
+    
+    function empty(Position memory _position) private returns (bool) {
+        return _position.TST == 0 && _position.EUROs == 0;
+    }
 
     function decreaseStake(uint256 _tstAmount, uint256 _eurosAmount) external {
         deleteStart(positions[msg.sender].start);
         start = earliestStart();
+        positions[msg.sender].TST -= _tstAmount;
+        positions[msg.sender].EUROs -= _eurosAmount;
+        if (empty(positions[msg.sender])) {
+            delete positions[msg.sender];
+        } else {
+            positions[msg.sender].start = block.timestamp;
+            starts.push(block.timestamp);
+        }
         IERC20(TST).safeTransfer(msg.sender, _tstAmount);
     }
 }

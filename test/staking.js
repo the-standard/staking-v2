@@ -54,16 +54,16 @@ describe('Staking', async () => {
       const ts4 = (await ethers.provider.getBlock(stake.blockNumber)).timestamp;
       expect(await Staking.start()).to.equal(ts1);
 
-      await Staking.connect(user1).decreaseStake(tstStake);
+      await Staking.connect(user1).decreaseStake(tstStake, 0);
       expect(await Staking.start()).to.equal(ts2);
 
-      await Staking.connect(user3).decreaseStake(tstStake);
+      await Staking.connect(user3).decreaseStake(tstStake, 0);
       expect(await Staking.start()).to.equal(ts2);
 
-      await Staking.connect(user2).decreaseStake(tstStake);
+      await Staking.connect(user2).decreaseStake(tstStake, 0);
       expect(await Staking.start()).to.equal(ts4);
 
-      await Staking.connect(user4).decreaseStake(tstStake);
+      await Staking.connect(user4).decreaseStake(tstStake, 0);
       expect(await Staking.start()).to.equal(0);
     });
   });
@@ -149,42 +149,46 @@ describe('Staking', async () => {
       // .02 EUROs per TST
       expect(await Staking.dailyEuroPerTstRate()).to.equal(ethers.utils.parseEther('.02'));
 
-      await Staking.connect(user3).decreaseStake(tstStake);
+      await Staking.connect(user3).decreaseStake(tstStake, 0);
       // 4 days, 400 TST, 40 EUROs
       // .025 EUROs per TST
       expect(await Staking.dailyEuroPerTstRate()).to.equal(ethers.utils.parseEther('.025'));
     });
   });
 
-  // describe('position', async () => {
-  //   it('shows detailed about amount staked and start of stake', async () => {
-  //     let position = await Staking.positions(user1.address);
-  //     expect(position.start).to.equal(0);
-  //     expect(position.TST).to.equal(0);
-  //     expect(position.EUROs).to.equal(0);
+  describe('position', async () => {
+    it('shows detailed about amount staked and start of stake', async () => {
+      let position = await Staking.positions(user1.address);
+      expect(position.start).to.equal(0);
+      expect(position.TST).to.equal(0);
+      expect(position.EUROs).to.equal(0);
 
-  //     const tstStake = ethers.utils.parseEther('10000');
-  //     const eurosStake = ethers.utils.parseEther('100');
-  //     await TST.mint(user1.address, tstStake);
-  //     await TST.connect(user1).approve(Staking.address, tstStake);
-  //     await EUROs.mint(user1.address, eurosStake);
-  //     await EUROs.connect(user1).approve(Staking.address, eurosStake);
-  //     const increase = await Staking.connect(user1).increaseStake(tstStake, eurosStake);
-  //     let stakeStart = (await ethers.provider.getBlock(increase.blockNumber)).timestamp;
-  //     console.log(stakeStart)
+      const tstStake = ethers.utils.parseEther('10000');
+      const eurosStake = ethers.utils.parseEther('100');
+      await TST.mint(user1.address, tstStake);
+      await TST.connect(user1).approve(Staking.address, tstStake);
+      await EUROs.mint(user1.address, eurosStake);
+      await EUROs.connect(user1).approve(Staking.address, eurosStake);
+      const increase = await Staking.connect(user1).increaseStake(tstStake, eurosStake);
+      let stakeStart = (await ethers.provider.getBlock(increase.blockNumber)).timestamp;
 
-  //     position = await Staking.positions(user1.address);
-  //     expect(position.start).to.equal(stakeStart);
-  //     expect(position.TST).to.equal(tstStake);
-  //     expect(position.EUROs).to.equal(eurosStake);
+      position = await Staking.positions(user1.address);
+      expect(position.start).to.equal(stakeStart);
+      expect(position.TST).to.equal(tstStake);
+      expect(position.EUROs).to.equal(eurosStake);
 
-  //     const decrease = await Staking.decreaseStake(tstStake.div(2), eurosStake);
-  //     stakeStart = (await ethers.provider.getBlock(decrease.blockNumber)).timestamp;
-  //     console.log(stakeStart)
-  //     position = await Staking.positions(user1.address);
-  //     expect(position.start).to.equal(stakeStart);
-  //     expect(position.TST).to.equal(tstStake.div(2));
-  //     expect(position.EUROs).to.equal(0);
-  //   })
-  // });
+      const decrease = await Staking.connect(user1).decreaseStake(tstStake.div(2), eurosStake);
+      stakeStart = (await ethers.provider.getBlock(decrease.blockNumber)).timestamp;
+      position = await Staking.positions(user1.address);
+      expect(position.start).to.equal(stakeStart);
+      expect(position.TST).to.equal(tstStake.div(2));
+      expect(position.EUROs).to.equal(0);
+
+      await Staking.connect(user1).decreaseStake(tstStake.div(2), 0);
+      position = await Staking.positions(user1.address);
+      expect(position.start).to.equal(0);
+      expect(position.TST).to.equal(0);
+      expect(position.EUROs).to.equal(0);
+    })
+  });
 });
