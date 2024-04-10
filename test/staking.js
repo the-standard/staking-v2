@@ -156,42 +156,6 @@ describe('Staking', async () => {
     });
   });
 
-  describe('position', async () => {
-    it('shows detailed about amount staked and start of stake', async () => {
-      let position = await Staking.positions(user1.address);
-      expect(position.start).to.equal(0);
-      expect(position.TST).to.equal(0);
-      expect(position.EUROs).to.equal(0);
-
-      const tstStake = ethers.utils.parseEther('10000');
-      const eurosStake = ethers.utils.parseEther('100');
-      await TST.mint(user1.address, tstStake);
-      await TST.connect(user1).approve(Staking.address, tstStake);
-      await EUROs.mint(user1.address, eurosStake);
-      await EUROs.connect(user1).approve(Staking.address, eurosStake);
-      const increase = await Staking.connect(user1).increaseStake(tstStake, eurosStake);
-      let stakeStart = (await ethers.provider.getBlock(increase.blockNumber)).timestamp;
-
-      position = await Staking.positions(user1.address);
-      expect(position.start).to.equal(stakeStart);
-      expect(position.TST).to.equal(tstStake);
-      expect(position.EUROs).to.equal(eurosStake);
-
-      const decrease = await Staking.connect(user1).decreaseStake(tstStake.div(2), eurosStake);
-      stakeStart = (await ethers.provider.getBlock(decrease.blockNumber)).timestamp;
-      position = await Staking.positions(user1.address);
-      expect(position.start).to.equal(stakeStart);
-      expect(position.TST).to.equal(tstStake.div(2));
-      expect(position.EUROs).to.equal(0);
-
-      await Staking.connect(user1).decreaseStake(tstStake.div(2), 0);
-      position = await Staking.positions(user1.address);
-      expect(position.start).to.equal(0);
-      expect(position.TST).to.equal(0);
-      expect(position.EUROs).to.equal(0);
-    })
-  });
-
   describe('increaseStake', async () => {
     it('increases the stake of TST and EUROs', async () => {
       let position = await Staking.positions(user1.address);
@@ -308,4 +272,25 @@ describe('Staking', async () => {
       expect(position.start).to.equal(0);
     });
   });
+
+  // describe('claimRewards', async () => {
+  //   it('grants user the accummulated EUROs fees', async () => {
+  //     expect(await Staking.start()).to.equal(0);
+
+  //     const tstStake = ethers.utils.parseEther('100');
+  //     await TST.mint(user1.address, tstStake);
+  //     await TST.connect(user1).approve(Staking.address, tstStake);
+  //     let stake = await Staking.connect(user1).increaseStake(tstStake, 0);
+  //     const ts1 = (await ethers.provider.getBlock(stake.blockNumber)).timestamp;
+  //     expect(await Staking.start()).to.equal(ts1);
+
+  //     await fastForward(60);
+
+  //     await TST.mint(user2.address, tstStake);
+  //     await TST.connect(user2).approve(Staking.address, tstStake);
+  //     stake = await Staking.connect(user2).increaseStake(tstStake, 0);
+  //     const ts2 = (await ethers.provider.getBlock(stake.blockNumber)).timestamp;
+  //     expect(await Staking.start()).to.equal(ts1);
+  //   });
+  // });
 });
