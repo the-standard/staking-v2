@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "hardhat/console.sol";
 
+
 contract Staking is Ownable {
     using SafeERC20 for IERC20;
 
@@ -21,6 +22,8 @@ contract Staking is Ownable {
     mapping(address => Position) public positions;
 
     struct Position { uint256 start; uint256 TST; uint256 EUROs; }
+
+    error InvalidStake();
 
     constructor(address _tst, address _euros) Ownable(msg.sender) {
         TST = _tst;
@@ -37,13 +40,14 @@ contract Staking is Ownable {
     }
 
     function increaseStake(uint256 _tst, uint256 _euros) external {
+        if (_tst == 0 && _euros == 0) revert InvalidStake();
         if (start == 0) start = block.timestamp;
         starts.push(block.timestamp);
         positions[msg.sender].start = block.timestamp;
         positions[msg.sender].TST += _tst;
         positions[msg.sender].EUROs += _euros;
-        IERC20(TST).safeTransferFrom(msg.sender, address(this), _tst);
-        IERC20(EUROs).safeTransferFrom(msg.sender, address(this), _euros);
+        if (_tst > 0) IERC20(TST).safeTransferFrom(msg.sender, address(this), _tst);
+        if (_euros > 0) IERC20(EUROs).safeTransferFrom(msg.sender, address(this), _euros);
     }
 
     function deleteIndexFromStarts(uint256 _index) private {

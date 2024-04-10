@@ -191,4 +191,70 @@ describe('Staking', async () => {
       expect(position.EUROs).to.equal(0);
     })
   });
+
+  describe('increaseStake', async () => {
+    it('increases the stake of TST and EUROs', async () => {
+      let position = await Staking.positions(user1.address);
+      expect(position.TST).to.equal(0);
+      expect(position.EUROs).to.equal(0);
+
+      const tstStake = ethers.utils.parseEther('10000');
+      const eurosStake = ethers.utils.parseEther('100');
+      await TST.mint(user1.address, tstStake);
+      await EUROs.mint(user1.address, eurosStake);
+      let increase = Staking.connect(user1).increaseStake(tstStake, eurosStake);
+      await expect(increase).to.be.revertedWithCustomError(TST, 'ERC20InsufficientAllowance');
+
+      await TST.connect(user1).approve(Staking.address, tstStake);
+      increase = Staking.connect(user1).increaseStake(tstStake, eurosStake);
+      await expect(increase).to.be.revertedWithCustomError(EUROs, 'ERC20InsufficientAllowance');
+      
+      await EUROs.connect(user1).approve(Staking.address, eurosStake);
+      increase = Staking.connect(user1).increaseStake(tstStake, eurosStake);
+      await expect(increase).not.to.be.reverted;
+
+      position = await Staking.positions(user1.address);
+      expect(position.TST).to.equal(tstStake);
+      expect(position.EUROs).to.equal(eurosStake);
+
+
+      expect(await TST.balanceOf(Staking.address)).to.equal(tstStake);
+      expect(await EUROs.balanceOf(Staking.address)).to.equal(eurosStake);
+      expect(await TST.balanceOf(user1.address)).to.equal(0);
+      expect(await EUROs.balanceOf(user1.address)).to.equal(0);
+    });
+
+    it('will not create stake if nothing staked', async () => {
+      let position = await Staking.positions(user1.address);
+      expect(position.start).to.equal(0);
+
+      let increase = Staking.connect(user1).increaseStake(0, 0);
+      await expect(increase).to.be.revertedWithCustomError(Staking, 'InvalidStake');
+    });
+
+    it('resets the staking start every time the stake is increased', async () => {
+      let position = await Staking.positions(user1.address);
+      expect(position.start).to.equal(0);
+
+      const tstStake = ethers.utils.parseEther('10000');
+      await TST.mint(user1.address, tstStake);
+      await TST.connect(user1).approve(Staking.address, tstStake);
+      let increase = await Staking.connect(user1).increaseStake(tstStake, 0);
+
+      position = await Staking.positions(user1.address);
+      expect(position.start).to.equal((await ethers.provider.getBlock(increase.blockNumber)).timestamp);
+
+      const eurosStake = ethers.utils.parseEther('100');
+      await EUROs.mint(user1.address, eurosStake);
+      await EUROs.connect(user1).approve(Staking.address, eurosStake);
+      increase = await Staking.connect(user1).increaseStake(0, eurosStake);
+
+      position = await Staking.positions(user1.address);
+      expect(position.start).to.equal((await ethers.provider.getBlock(increase.blockNumber)).timestamp);
+    });
+  });
+
+  // describe('decreaseStake', async() => {
+  //   it('allows uses to remove ')
+  // });
 });
