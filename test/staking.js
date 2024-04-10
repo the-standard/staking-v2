@@ -202,7 +202,11 @@ describe('Staking', async () => {
       const eurosStake = ethers.utils.parseEther('100');
       await TST.mint(user1.address, tstStake);
       await EUROs.mint(user1.address, eurosStake);
-      let increase = Staking.connect(user1).increaseStake(tstStake, eurosStake);
+
+      let increase = Staking.connect(user1).increaseStake(0, 0);
+      await expect(increase).to.be.revertedWithCustomError(Staking, 'InvalidStake');
+
+      increase = Staking.connect(user1).increaseStake(tstStake, eurosStake);
       await expect(increase).to.be.revertedWithCustomError(TST, 'ERC20InsufficientAllowance');
 
       await TST.connect(user1).approve(Staking.address, tstStake);
@@ -222,14 +226,6 @@ describe('Staking', async () => {
       expect(await EUROs.balanceOf(Staking.address)).to.equal(eurosStake);
       expect(await TST.balanceOf(user1.address)).to.equal(0);
       expect(await EUROs.balanceOf(user1.address)).to.equal(0);
-    });
-
-    it('will not create stake if nothing staked', async () => {
-      let position = await Staking.positions(user1.address);
-      expect(position.start).to.equal(0);
-
-      let increase = Staking.connect(user1).increaseStake(0, 0);
-      await expect(increase).to.be.revertedWithCustomError(Staking, 'InvalidStake');
     });
 
     it('resets the staking start every time the stake is increased', async () => {
