@@ -93,7 +93,8 @@ contract Staking is Ownable {
             positions[msg.sender] = _position;
             starts.push(block.timestamp);
         }
-        
+
         IERC20(TST).safeTransfer(msg.sender, _tstAmount);
+        IERC20(EUROs).safeTransfer(msg.sender, _eurosAmount);
     }
 }

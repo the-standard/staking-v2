@@ -277,11 +277,39 @@ describe('Staking', async () => {
       expect(position.TST).to.equal(tstStake.div(2));
       expect(position.EUROs).to.equal(eurosStake);
 
+      expect(await TST.balanceOf(Staking.address)).to.equal(tstStake.div(2));
+      expect(await TST.balanceOf(user1.address)).to.equal(tstStake.div(2));
+
       await expect(Staking.connect(user1).decreaseStake(tstStake.div(2), eurosStake)).not.to.be.reverted;
       
       position = await Staking.positions(user1.address);
       expect(position.TST).to.equal(0);
       expect(position.EUROs).to.equal(0);
+
+      expect(await TST.balanceOf(Staking.address)).to.equal(0);
+      expect(await EUROs.balanceOf(Staking.address)).to.equal(0);
+      expect(await TST.balanceOf(user1.address)).to.equal(tstStake);
+      expect(await EUROs.balanceOf(user1.address)).to.equal(eurosStake);
+    });
+
+    it('resets staking start when stake is decreased, removes when emptied', async () => {
+      const tstStake = ethers.utils.parseEther('10000');
+      const eurosStake = ethers.utils.parseEther('100');
+      await TST.mint(user1.address, tstStake);
+      await EUROs.mint(user1.address, eurosStake);
+      await TST.connect(user1).approve(Staking.address, tstStake);
+      await EUROs.connect(user1).approve(Staking.address, eurosStake);
+      await Staking.connect(user1).increaseStake(tstStake, eurosStake);
+
+      let decrease = await Staking.connect(user1).decreaseStake(tstStake.div(2), 0)
+
+      position = await Staking.positions(user1.address);
+      expect(position.start).to.equal((await ethers.provider.getBlock(decrease.blockNumber)).timestamp);
+
+      decrease = await Staking.connect(user1).decreaseStake(tstStake.div(2), eurosStake)
+
+      position = await Staking.positions(user1.address);
+      expect(position.start).to.equal(0);
     });
   });
 });
