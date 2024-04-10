@@ -254,7 +254,34 @@ describe('Staking', async () => {
     });
   });
 
-  // describe('decreaseStake', async() => {
-  //   it('allows uses to remove ')
-  // });
+  describe('decreaseStake', async() => {
+    it('allows users to remove part or all of their stake', async () => {
+      const tstStake = ethers.utils.parseEther('10000');
+      const eurosStake = ethers.utils.parseEther('100');
+      await TST.mint(user1.address, tstStake);
+      await EUROs.mint(user1.address, eurosStake);
+      await TST.connect(user1).approve(Staking.address, tstStake);
+      await EUROs.connect(user1).approve(Staking.address, eurosStake);
+      await Staking.connect(user1).increaseStake(tstStake, eurosStake);
+
+      let position = await Staking.positions(user1.address);
+      expect(position.TST).to.equal(tstStake);
+      expect(position.EUROs).to.equal(eurosStake);
+
+      await expect(Staking.connect(user1).decreaseStake(tstStake.add(1), 0)).to.be.revertedWithCustomError(Staking, 'InvalidUnstake');
+      await expect(Staking.connect(user1).decreaseStake(0, eurosStake.add(1))).to.be.revertedWithCustomError(Staking, 'InvalidUnstake');
+
+      await expect(Staking.connect(user1).decreaseStake(tstStake.div(2), 0)).not.to.be.reverted;
+
+      position = await Staking.positions(user1.address);
+      expect(position.TST).to.equal(tstStake.div(2));
+      expect(position.EUROs).to.equal(eurosStake);
+
+      await expect(Staking.connect(user1).decreaseStake(tstStake.div(2), eurosStake)).not.to.be.reverted;
+      
+      position = await Staking.positions(user1.address);
+      expect(position.TST).to.equal(0);
+      expect(position.EUROs).to.equal(0);
+    });
+  });
 });

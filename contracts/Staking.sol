@@ -24,6 +24,7 @@ contract Staking is Ownable {
     struct Position { uint256 start; uint256 TST; uint256 EUROs; }
 
     error InvalidStake();
+    error InvalidUnstake();
 
     constructor(address _tst, address _euros) Ownable(msg.sender) {
         TST = _tst;
@@ -77,16 +78,22 @@ contract Staking is Ownable {
     }
 
     function decreaseStake(uint256 _tstAmount, uint256 _eurosAmount) external {
-        deleteStart(positions[msg.sender].start);
-        start = earliestStart();
-        positions[msg.sender].TST -= _tstAmount;
-        positions[msg.sender].EUROs -= _eurosAmount;
-        if (empty(positions[msg.sender])) {
+        Position memory _position = positions[msg.sender];
+        if (_tstAmount > _position.TST || _eurosAmount > _position.EUROs) revert InvalidUnstake();
+        
+        _position.TST -= _tstAmount;
+        _position.EUROs -= _eurosAmount;
+        deleteStart(_position.start);
+        if (start == _position.start) start = earliestStart();
+        _position.start = block.timestamp;
+
+        if (empty(_position)) {
             delete positions[msg.sender];
         } else {
-            positions[msg.sender].start = block.timestamp;
+            positions[msg.sender] = _position;
             starts.push(block.timestamp);
         }
+        
         IERC20(TST).safeTransfer(msg.sender, _tstAmount);
     }
 }
