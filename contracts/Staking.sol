@@ -31,13 +31,14 @@ contract Staking is Ownable {
         EUROs = _euros;
     }
 
-    function dailyEuroPerTstRate() external view returns(uint256) {
+    function dailyEuroPerTstRate() public view returns(uint256) {
         uint256 stakingDays = (block.timestamp - start) / 1 days;
         return fees > 0 && stakingDays > 0 ? RATE_ACCURACY * fees / IERC20(TST).balanceOf(address(this)) / stakingDays : 0;
     }
 
     function dropFees(uint256 _fees) external {
         fees += _fees;
+        IERC20(EUROs).safeTransferFrom(msg.sender, address(this), _fees);
     }
 
     function increaseStake(uint256 _tst, uint256 _euros) external {
@@ -85,16 +86,28 @@ contract Staking is Ownable {
         _position.EUROs -= _eurosAmount;
         deleteStart(_position.start);
         if (start == _position.start) start = earliestStart();
-        _position.start = block.timestamp;
 
         if (empty(_position)) {
             delete positions[msg.sender];
         } else {
+            _position.start = block.timestamp;
             positions[msg.sender] = _position;
             starts.push(block.timestamp);
         }
 
         if (_tstAmount > 0) IERC20(TST).safeTransfer(msg.sender, _tstAmount);
         if (_eurosAmount > 0) IERC20(EUROs).safeTransfer(msg.sender, _eurosAmount);
+    }
+
+    function claim() external {
+        Position memory _position = positions[msg.sender];
+        uint256 _days = (block.timestamp - _position.start) / 1 days;
+        uint256 _euros = dailyEuroPerTstRate() * positions[msg.sender].TST * _days / RATE_ACCURACY;
+        fees -= _euros;
+        IERC20(EUROs).safeTransfer(msg.sender, _euros);
+        deleteStart(_position.start);
+        if (start == _position.start) start = earliestStart();
+        _position.start = block.timestamp;
+        positions[msg.sender] = _position;
     }
 }

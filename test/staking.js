@@ -1,6 +1,8 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
+// TODO mathematically is there any benefit to a user just claiming every 24 hours? is it damaging to other user stakes?
+
 const DAY = 24 * 60 * 60;
 
 const fastForward = async time => {
@@ -273,24 +275,44 @@ describe('Staking', async () => {
     });
   });
 
-  // describe('claimRewards', async () => {
-  //   it('grants user the accummulated EUROs fees', async () => {
-  //     expect(await Staking.start()).to.equal(0);
+  describe('claimRewards', async () => {
+    it('grants user the accummulated EUROs fees', async () => {
+      const fees = ethers.utils.parseEther('20');
+      await EUROs.mint(admin.address, fees);
+      await EUROs.connect(admin).approve(Staking.address, fees);
+      await Staking.connect(admin).dropFees(fees);
 
-  //     const tstStake = ethers.utils.parseEther('100');
-  //     await TST.mint(user1.address, tstStake);
-  //     await TST.connect(user1).approve(Staking.address, tstStake);
-  //     let stake = await Staking.connect(user1).increaseStake(tstStake, 0);
-  //     const ts1 = (await ethers.provider.getBlock(stake.blockNumber)).timestamp;
-  //     expect(await Staking.start()).to.equal(ts1);
+      let tstStake = ethers.utils.parseEther('100');
+      await TST.mint(user1.address, tstStake);
+      await TST.connect(user1).approve(Staking.address, tstStake);
+      await Staking.connect(user1).increaseStake(tstStake, 0);
 
-  //     await fastForward(60);
+      await fastForward(DAY);
 
-  //     await TST.mint(user2.address, tstStake);
-  //     await TST.connect(user2).approve(Staking.address, tstStake);
-  //     stake = await Staking.connect(user2).increaseStake(tstStake, 0);
-  //     const ts2 = (await ethers.provider.getBlock(stake.blockNumber)).timestamp;
-  //     expect(await Staking.start()).to.equal(ts1);
-  //   });
-  // });
+      const eurosStake = ethers.utils.parseEther('20');
+      await TST.mint(user2.address, tstStake.mul(2));
+      await TST.connect(user2).approve(Staking.address, tstStake.mul(2));
+      await EUROs.mint(user2.address, eurosStake);
+      await EUROs.connect(user2).approve(Staking.address, eurosStake);
+      await Staking.connect(user2).increaseStake(tstStake.mul(2), eurosStake);
+
+      await fastForward(DAY);
+
+      await TST.mint(user3.address, tstStake);
+      await TST.connect(user3).approve(Staking.address, tstStake);
+      await Staking.connect(user3).increaseStake(tstStake, 0);
+
+      // euros per tst per day rate = 20 euros / 400 tst / 2 days = 0.025
+      // user 1 has 100 TST staked for 2 days = 0.025 * 100 * 2 = 5 EUROs reward
+      await Staking.connect(user1).claim();
+      expect(await EUROs.balanceOf(user1.address)).to.equal(ethers.utils.parseEther('5'))
+
+      await fastForward(DAY);
+
+      // euros per tst per day rate = 15 euros / 400 tst / 2 days = 0.01875
+      // user 2 has 200 TST staked for 2 days = 0.01875 * 200 * 2 = 7.5 EUROs reward
+      await Staking.connect(user2).claim();
+      expect(await EUROs.balanceOf(user2.address)).to.equal(ethers.utils.parseEther('7.5'));
+    });
+  });
 });
