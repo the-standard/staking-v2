@@ -79,12 +79,7 @@ contract Staking is Ownable {
         return _position.TST == 0 && _position.EUROs == 0;
     }
 
-    function decreaseStake(uint256 _tstAmount, uint256 _eurosAmount) external {
-        Position memory _position = positions[msg.sender];
-        if (_tstAmount > _position.TST || _eurosAmount > _position.EUROs) revert InvalidUnstake();
-        
-        _position.TST -= _tstAmount;
-        _position.EUROs -= _eurosAmount;
+    function savePosition(Position memory _position) private {
         deleteStart(_position.start);
         if (start == _position.start) start = earliestStart();
 
@@ -92,9 +87,19 @@ contract Staking is Ownable {
             delete positions[msg.sender];
         } else {
             _position.start = block.timestamp;
-            positions[msg.sender] = _position;
             starts.push(block.timestamp);
+            positions[msg.sender] = _position;
         }
+    }
+
+    function decreaseStake(uint256 _tstAmount, uint256 _eurosAmount) external {
+        Position memory _position = positions[msg.sender];
+        if (_tstAmount > _position.TST || _eurosAmount > _position.EUROs) revert InvalidUnstake();
+        
+        _position.TST -= _tstAmount;
+        _position.EUROs -= _eurosAmount;
+
+        savePosition(_position);
 
         if (_tstAmount > 0) IERC20(TST).safeTransfer(msg.sender, _tstAmount);
         if (_eurosAmount > 0) IERC20(EUROs).safeTransfer(msg.sender, _eurosAmount);
@@ -109,10 +114,7 @@ contract Staking is Ownable {
         uint256 _euros = dailyEuroPerTstRate() * _position.TST * daysStaked(_position) / RATE_ACCURACY;
         fees -= _euros;
         IERC20(EUROs).safeTransfer(msg.sender, _euros);
-        deleteStart(_position.start);
-        if (start == _position.start) start = earliestStart();
-        _position.start = block.timestamp;
-        positions[msg.sender] = _position;
+        savePosition(_position);
     }
 
     function projectedEarnings(address _holder) external view returns (uint256 _EUROs, Reward[] memory _rewards) {
