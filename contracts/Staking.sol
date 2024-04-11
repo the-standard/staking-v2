@@ -80,8 +80,7 @@ contract Staking is Ownable {
     }
 
     function savePosition(Position memory _position) private {
-        deleteStart(_position.start);
-        if (start == _position.start) start = earliestStart();
+        uint256 _previousStart = _position.start;
 
         if (empty(_position)) {
             delete positions[msg.sender];
@@ -90,6 +89,9 @@ contract Staking is Ownable {
             starts.push(block.timestamp);
             positions[msg.sender] = _position;
         }
+
+        deleteStart(_previousStart);
+        if (start == _previousStart) start = earliestStart();
     }
 
     function decreaseStake(uint256 _tstAmount, uint256 _eurosAmount) external {
