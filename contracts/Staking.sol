@@ -21,6 +21,7 @@ contract Staking is Ownable {
     uint256[] private starts;
     mapping(address => Position) public positions;
 
+    struct Reward { address _token; uint256 _amount; }
     struct Position { uint256 start; uint256 TST; uint256 EUROs; }
 
     error InvalidStake();
@@ -99,15 +100,23 @@ contract Staking is Ownable {
         if (_eurosAmount > 0) IERC20(EUROs).safeTransfer(msg.sender, _eurosAmount);
     }
 
+    function daysStaked(Position memory _position) private view returns (uint256) {
+        return (block.timestamp - _position.start) / 1 days;
+    }
+
     function claim() external {
         Position memory _position = positions[msg.sender];
-        uint256 _days = (block.timestamp - _position.start) / 1 days;
-        uint256 _euros = dailyEuroPerTstRate() * positions[msg.sender].TST * _days / RATE_ACCURACY;
+        uint256 _euros = dailyEuroPerTstRate() * _position.TST * daysStaked(_position) / RATE_ACCURACY;
         fees -= _euros;
         IERC20(EUROs).safeTransfer(msg.sender, _euros);
         deleteStart(_position.start);
         if (start == _position.start) start = earliestStart();
         _position.start = block.timestamp;
         positions[msg.sender] = _position;
+    }
+
+    function projectedEarnings(address _holder) external view returns (uint256 _EUROs, Reward[] memory _rewards) {
+        Position memory _position = positions[_holder];
+        _EUROs = dailyEuroPerTstRate() * _position.TST * daysStaked(_position) / RATE_ACCURACY;
     }
 }

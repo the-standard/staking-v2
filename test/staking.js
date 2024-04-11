@@ -275,6 +275,66 @@ describe('Staking', async () => {
     });
   });
 
+  describe('projectedEarnings', async () => {
+    it('shows the projected earnings for a user', async () => {
+      let fees = ethers.utils.parseEther('20');
+      await EUROs.mint(admin.address, fees);
+      await EUROs.connect(admin).approve(Staking.address, fees);
+      await Staking.connect(admin).dropFees(fees);
+
+      let tstStake = ethers.utils.parseEther('100');
+      await TST.mint(user1.address, tstStake);
+      await TST.connect(user1).approve(Staking.address, tstStake);
+      await Staking.connect(user1).increaseStake(tstStake, 0);
+
+      await fastForward(DAY);
+
+      const eurosStake = ethers.utils.parseEther('20');
+      await TST.mint(user2.address, tstStake.mul(2));
+      await TST.connect(user2).approve(Staking.address, tstStake.mul(2));
+      await EUROs.mint(user2.address, eurosStake);
+      await EUROs.connect(user2).approve(Staking.address, eurosStake);
+      await Staking.connect(user2).increaseStake(tstStake.mul(2), eurosStake);
+
+      await fastForward(DAY);
+
+      await TST.mint(user3.address, tstStake);
+      await TST.connect(user3).approve(Staking.address, tstStake);
+      await Staking.connect(user3).increaseStake(tstStake, 0);
+
+      // euros per tst per day rate = 20 euros / 400 tst / 2 days = 0.025
+      // user 1 has 100 TST staked for 2 days = 0.025 * 100 * 2 = 5 EUROs projected
+      let projected = await Staking.projectedEarnings(user1.address);
+      expect(projected._EUROs).to.equal(ethers.utils.parseEther('5'));
+      expect(projected._rewards).to.be.empty;
+
+      // euros per tst per day rate = 20 euros / 400 tst / 2 days = 0.025
+      // user 2 has 200 TST staked for 1 days = 0.025 * 200 * 1 = 5 EUROs projected
+      projected = await Staking.projectedEarnings(user2.address);
+      expect(projected._EUROs).to.equal(ethers.utils.parseEther('5'));
+      expect(projected._rewards).to.be.empty;
+
+      await fastForward(DAY);
+
+      fees = ethers.utils.parseEther('10');
+      await EUROs.mint(admin.address, fees);
+      await EUROs.connect(admin).approve(Staking.address, fees);
+      await Staking.connect(admin).dropFees(fees);
+
+      // euros per tst per day rate = 30 euros / 400 tst / 3 days = 0.025
+      // user 2 has 200 TST staked for 2 days = 0.025 * 200 * 2 = 10 EUROs projected
+      projected = await Staking.projectedEarnings(user2.address);
+      expect(projected._EUROs).to.equal(ethers.utils.parseEther('10'));
+      expect(projected._rewards).to.be.empty;
+
+      // euros per tst per day rate = 30 euros / 400 tst / 3 days = 0.025
+      // user 3 has 100 TST staked for 2 days = 0.025 * 100 * 1 = 2.5 EUROs projected
+      projected = await Staking.projectedEarnings(user3.address);
+      expect(projected._EUROs).to.equal(ethers.utils.parseEther('2.5'));
+      expect(projected._rewards).to.be.empty;
+    });
+  });
+
   describe('claimRewards', async () => {
     it('grants user the accummulated EUROs fees', async () => {
       const fees = ethers.utils.parseEther('20');
