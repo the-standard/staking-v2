@@ -43,4 +43,12 @@ contract RewardGateway {
             }
         }
     }
+
+    function airdropToken(address _token, uint256 _amount) external {
+        if (_amount > 0) {
+            IERC20(_token).transferFrom(msg.sender, address(this), _amount);
+            IERC20(_token).approve(staking, _amount);
+            IStaking(staking).dropFees(_token, _amount);
+        }
+    }
 }

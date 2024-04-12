@@ -11,7 +11,7 @@ const fastForward = async time => {
 }
 
 describe('Staking', async () => {
-  let TST, EUROs, Staking, RewardToken18Dec, RewardToken6Dec,
+  let TST, EUROs, Staking, RewardToken18Dec, RewardToken6Dec, UnofficialRewardToken,
     admin, user1, user2, user3, user4, user5;
 
   beforeEach(async () => {
@@ -22,6 +22,7 @@ describe('Staking', async () => {
     Staking = await (await ethers.getContractFactory('Staking')).deploy(TST.address, EUROs.address);
     RewardToken18Dec = await (await ethers.getContractFactory('MockERC20')).deploy('Reward Token 18', 'RT18', 18)
     RewardToken6Dec = await (await ethers.getContractFactory('MockERC20')).deploy('Reward Token 6', 'RT6', 6)
+    UnofficialRewardToken = await (await ethers.getContractFactory('MockERC20')).deploy('Unofficial Reward Token 6', 'URT6', 18)
     const MockTokenManager = await (await ethers.getContractFactory('MockTokenManager')).deploy(
       [RewardToken18Dec.address, RewardToken6Dec.address]
     );
@@ -494,18 +495,34 @@ describe('Staking', async () => {
     });
 
     it('allows any token to be dropped on staking pool', async () => {
-      const tstStake = ethers.utils.parseEther('100');
-      await TST.mint(user1.address, tstStake);
-      await TST.connect(user1).approve(Staking.address, tstStake);
-      await Staking.connect(user1).increaseStake(tstStake, 0);
+      const eurosStake = ethers.utils.parseEther('100');
+      await EUROs.mint(user1.address, eurosStake);
+      await EUROs.connect(user1).approve(Staking.address, eurosStake);
+      await Staking.connect(user1).increaseStake(0, eurosStake);
 
-      await TST.mint(user2.address, tstStake);
-      await TST.connect(user2).approve(Staking.address, tstStake);
-      await Staking.connect(user2).increaseStake(tstStake, 0);
+      await EUROs.mint(user2.address, eurosStake.mul(2));
+      await EUROs.connect(user2).approve(Staking.address, eurosStake.mul(2));
+      await Staking.connect(user2).increaseStake(0, eurosStake.mul(2));
 
       await fastForward(DAY);
 
+      const airdropAmount = ethers.utils.parseEther('100');
+      await UnofficialRewardToken.mint(admin.address, airdropAmount);
+      await UnofficialRewardToken.approve(RewardGateway.address, airdropAmount);
+      await RewardGateway.airdropToken(UnofficialRewardToken.address, airdropAmount);
+      expect(await UnofficialRewardToken.balanceOf(Staking.address)).to.equal(airdropAmount);
 
+      let projectedEarnings = await Staking.projectedEarnings(user1.address);
+      expect(projectedEarnings._rewards).to.have.length(1);
+      expect(projectedEarnings._rewards[0].token).to.equal(UnofficialRewardToken.address);
+      let estimatedFees = eurosStake.mul(airdropAmount).div(eurosStake.mul(3));
+      expect(projectedEarnings._rewards[0].amount).to.equal(estimatedFees);
+
+      projectedEarnings = await Staking.projectedEarnings(user2.address);
+      expect(projectedEarnings._rewards).to.have.length(1);
+      expect(projectedEarnings._rewards[0].token).to.equal(UnofficialRewardToken.address);
+      estimatedFees = eurosStake.mul(2).mul(airdropAmount).div(eurosStake.mul(3));
+      expect(projectedEarnings._rewards[0].amount).to.equal(estimatedFees);
     });
   });
 });
