@@ -4,11 +4,11 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "contracts/interfaces/IStaking.sol";
 
 import "hardhat/console.sol";
 
-
-contract Staking is Ownable {
+contract Staking is Ownable, IStaking {
     using SafeERC20 for IERC20;
 
     uint256 private constant RATE_ACCURACY = 1 ether;
@@ -17,11 +17,13 @@ contract Staking is Ownable {
     address private immutable EUROs;
 
     uint256 public start;
-    uint256 private fees;
-    uint256[] private starts;
     mapping(address => Position) public positions;
+    address public rewardGateway;
+    uint256 private eurosFees;
+    uint256[] private starts;
+    address[] private rewardTokens;
 
-    struct Reward { address _token; uint256 _amount; }
+    struct Reward { address token; uint256 amount; }
     struct Position { uint256 start; uint256 TST; uint256 EUROs; }
 
     error InvalidStake();
@@ -32,14 +34,37 @@ contract Staking is Ownable {
         EUROs = _euros;
     }
 
-    function dailyEuroPerTstRate() public view returns(uint256) {
-        uint256 stakingDays = (block.timestamp - start) / 1 days;
-        return fees > 0 && stakingDays > 0 ? RATE_ACCURACY * fees / IERC20(TST).balanceOf(address(this)) / stakingDays : 0;
+    function calculateEUROs(Position memory _position) private view returns (uint256) {
+        uint256 _totalDays = totalDays();
+        uint256 _balance = IERC20(TST).balanceOf(address(this));
+        if (_totalDays > 0 && _balance > 0) {
+            return _position.TST * daysStaked(_position) * eurosFees
+                / _balance / _totalDays;
+        }
     }
 
-    function dropFees(uint256 _fees) external {
-        fees += _fees;
-        IERC20(EUROs).safeTransferFrom(msg.sender, address(this), _fees);
+    function dailyEuroPerTstRate() external view returns (uint256) {
+        return calculateEUROs(Position(block.timestamp - 1 days, 1 ether, 0));
+    }
+
+    function addUniqueRewardToken(address _token) private {
+        for (uint256 i = 0; i < rewardTokens.length; i++) {
+            if (rewardTokens[i] == _token) return;
+        }
+
+        rewardTokens.push(_token);
+    }
+
+    function dropFees(address _token, uint256 _amount) external payable {
+        if (_token == EUROs) {
+            eurosFees += _amount;
+        } else {
+            addUniqueRewardToken(_token);
+        }
+        
+        if (_token != address(0)) {
+            IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
+        }
     }
 
     function increaseStake(uint256 _tst, uint256 _euros) external {
@@ -113,14 +138,34 @@ contract Staking is Ownable {
 
     function claim() external {
         Position memory _position = positions[msg.sender];
-        uint256 _euros = dailyEuroPerTstRate() * _position.TST * daysStaked(_position) / RATE_ACCURACY;
-        fees -= _euros;
+        uint256 _euros = calculateEUROs(_position);
+        eurosFees -= _euros;
         IERC20(EUROs).safeTransfer(msg.sender, _euros);
         savePosition(_position);
     }
 
+    function totalDays() private view returns (uint256) {
+        return (block.timestamp - start) / 1 days;
+    }
+
     function projectedEarnings(address _holder) external view returns (uint256 _EUROs, Reward[] memory _rewards) {
         Position memory _position = positions[_holder];
-        _EUROs = dailyEuroPerTstRate() * _position.TST * daysStaked(_position) / RATE_ACCURACY;
+        _EUROs = calculateEUROs(_position);
+        
+        _rewards = new Reward[](rewardTokens.length);
+        for (uint256 i = 0; i < rewardTokens.length; i++) {
+            address _rewardToken = rewardTokens[i];
+            uint256 _balance = _rewardToken == address(0) ?
+                address(this).balance :
+                IERC20(_rewardToken).balanceOf(address(this));
+
+            _rewards[i].token = _rewardToken;
+            _rewards[i].amount = (_position.EUROs + _EUROs) * daysStaked(_position) * _balance
+                / IERC20(EUROs).balanceOf(address(this)) / totalDays();
+        }
+    }
+
+    function setRewardGateway(address _rewardGateway) external {
+        rewardGateway = _rewardGateway;
     }
 }

@@ -11,7 +11,7 @@ const fastForward = async time => {
 }
 
 describe('Staking', async () => {
-  let TST, EUROs, Staking,
+  let TST, EUROs, Staking, RewardToken18Dec, RewardToken6Dec,
     admin, user1, user2, user3, user4, user5;
 
   beforeEach(async () => {
@@ -20,6 +20,13 @@ describe('Staking', async () => {
     TST = await (await ethers.getContractFactory('MockERC20')).deploy('The Standard Token', 'TST', 18);
     EUROs = await (await ethers.getContractFactory('MockERC20')).deploy('Standard Euro', 'EUROs', 18);
     Staking = await (await ethers.getContractFactory('Staking')).deploy(TST.address, EUROs.address);
+    RewardToken18Dec = await (await ethers.getContractFactory('MockERC20')).deploy('Reward Token 18', 'RT18', 18)
+    RewardToken6Dec = await (await ethers.getContractFactory('MockERC20')).deploy('Reward Token 6', 'RT6', 6)
+    const MockTokenManager = await (await ethers.getContractFactory('MockTokenManager')).deploy(
+      [RewardToken18Dec.address, RewardToken6Dec.address]
+    );
+    RewardGateway = await (await ethers.getContractFactory('RewardGateway')).deploy(Staking.address, EUROs.address, MockTokenManager.address);
+    await Staking.setRewardGateway(RewardGateway.address);
   });
 
   describe('start', async () => {
@@ -82,9 +89,8 @@ describe('Staking', async () => {
       expect(await Staking.dailyEuroPerTstRate()).to.equal(0);
 
       const fees = ethers.utils.parseEther('10')
-      await EUROs.mint(admin.address, fees)
-      await EUROs.connect(admin).approve(Staking.address, fees);
-      await Staking.connect(admin).dropFees(fees);
+      await EUROs.mint(RewardGateway.address, fees)
+      await RewardGateway.dropFees();
 
       // 0 day, 100 TST, 100 EUROs
       expect(await Staking.dailyEuroPerTstRate()).to.equal(0);
@@ -100,9 +106,8 @@ describe('Staking', async () => {
       // .05 EUROs per TST
       expect(await Staking.dailyEuroPerTstRate()).to.equal(ethers.utils.parseEther('0.05'));
 
-      await EUROs.mint(admin.address, fees)
-      await EUROs.connect(admin).approve(Staking.address, fees);
-      await Staking.connect(admin).dropFees(fees);
+      await EUROs.mint(RewardGateway.address, fees)
+      await RewardGateway.dropFees();
       // 1 day, 200 TST, 20 EUROs
       // .1 EUROs per TST
       expect(await Staking.dailyEuroPerTstRate()).to.equal(ethers.utils.parseEther('.1'));
@@ -120,9 +125,8 @@ describe('Staking', async () => {
       // .05 EUROs per TST
       expect(await Staking.dailyEuroPerTstRate()).to.equal(ethers.utils.parseEther('.025'));
 
-      await EUROs.mint(admin.address, fees)
-      await EUROs.connect(admin).approve(Staking.address, fees);
-      await Staking.connect(admin).dropFees(fees);
+      await EUROs.mint(RewardGateway.address, fees)
+      await RewardGateway.dropFees();
       // 2 days, 400 TST, 30 EUROs
       // .0375 EUROs per TST
       expect(await Staking.dailyEuroPerTstRate()).to.equal(ethers.utils.parseEther('.0375'));
@@ -144,9 +148,8 @@ describe('Staking', async () => {
       // .015 EUROs per TST
       expect(await Staking.dailyEuroPerTstRate()).to.equal(ethers.utils.parseEther('0.015'));
 
-      await EUROs.mint(admin.address, fees)
-      await EUROs.connect(admin).approve(Staking.address, fees);
-      await Staking.connect(admin).dropFees(fees);
+      await EUROs.mint(RewardGateway.address, fees)
+      await RewardGateway.dropFees();
       // 4 days, 500 TST, 40 EUROs
       // .02 EUROs per TST
       expect(await Staking.dailyEuroPerTstRate()).to.equal(ethers.utils.parseEther('.02'));
@@ -278,9 +281,8 @@ describe('Staking', async () => {
   describe('projectedEarnings', async () => {
     it('shows the projected earnings for a user', async () => {
       let fees = ethers.utils.parseEther('20');
-      await EUROs.mint(admin.address, fees);
-      await EUROs.connect(admin).approve(Staking.address, fees);
-      await Staking.connect(admin).dropFees(fees);
+      await EUROs.mint(RewardGateway.address, fees)
+      await RewardGateway.dropFees();
 
       let tstStake = ethers.utils.parseEther('100');
       await TST.mint(user1.address, tstStake);
@@ -317,9 +319,8 @@ describe('Staking', async () => {
       await fastForward(DAY);
 
       fees = ethers.utils.parseEther('10');
-      await EUROs.mint(admin.address, fees);
-      await EUROs.connect(admin).approve(Staking.address, fees);
-      await Staking.connect(admin).dropFees(fees);
+      await EUROs.mint(RewardGateway.address, fees)
+      await RewardGateway.dropFees();
 
       // euros per tst per day rate = 30 euros / 400 tst / 3 days = 0.025
       // user 2 has 200 TST staked for 2 days = 0.025 * 200 * 2 = 10 EUROs projected
@@ -338,9 +339,8 @@ describe('Staking', async () => {
   describe('claimRewards', async () => {
     it('grants user the accummulated EUROs fees', async () => {
       const fees = ethers.utils.parseEther('20');
-      await EUROs.mint(admin.address, fees);
-      await EUROs.connect(admin).approve(Staking.address, fees);
-      await Staking.connect(admin).dropFees(fees);
+      await EUROs.mint(RewardGateway.address, fees)
+      await RewardGateway.dropFees();
 
       let tstStake = ethers.utils.parseEther('100');
       await TST.mint(user1.address, tstStake);
@@ -374,5 +374,116 @@ describe('Staking', async () => {
       await Staking.connect(user2).claim();
       expect(await EUROs.balanceOf(user2.address)).to.equal(ethers.utils.parseEther('7.5'));
     });
+  });
+
+  describe('dropFees', async () => {
+    it('adds fees to the staking pool, using reward gateway', async () => {
+      const tstStake = ethers.utils.parseEther('100000');
+      const eurosStake = ethers.utils.parseEther('100');
+      await TST.mint(user1.address, tstStake);
+      await TST.connect(user1).approve(Staking.address, tstStake);
+      await EUROs.mint(user1.address, eurosStake);
+      await EUROs.connect(user1).approve(Staking.address, eurosStake);
+      await Staking.connect(user1).increaseStake(tstStake, eurosStake);
+
+      await TST.mint(user2.address, tstStake);
+      await TST.connect(user2).approve(Staking.address, tstStake);
+      await EUROs.mint(user2.address, eurosStake.mul(3));
+      await EUROs.connect(user2).approve(Staking.address, eurosStake.mul(3));
+      await Staking.connect(user2).increaseStake(tstStake, eurosStake.mul(3));
+
+      await fastForward(DAY);
+
+      const eurosFees = ethers.utils.parseEther('3');
+      const ethFees = ethers.utils.parseEther('0.0005');
+      const dec18Fees = ethers.utils.parseEther('7');
+      const dec6Fees = 8000000;
+
+      await EUROs.mint(RewardGateway.address, eurosFees);
+      await RewardGateway.dropFees();
+      expect(await EUROs.balanceOf(Staking.address)).to.equal(eurosStake.mul(4).add(eurosFees));
+
+      let projectedEarnings = await Staking.projectedEarnings(user1.address);
+      expect(projectedEarnings._EUROs).to.equal(eurosFees.div(2));
+
+      projectedEarnings = await Staking.projectedEarnings(user2.address);
+      expect(projectedEarnings._EUROs).to.equal(eurosFees.div(2));
+
+      // all other fees should be based on EUROs stake
+      // -- eth fees --
+
+      await admin.sendTransaction({to: RewardGateway.address, value: ethFees});
+      await RewardGateway.dropFees();
+      expect(await ethers.provider.getBalance(Staking.address)).to.equal(ethFees);
+
+      const totalEurosInPool = eurosStake.mul(4).add(eurosFees);
+
+      projectedEarnings = await Staking.projectedEarnings(user1.address);
+      expect(projectedEarnings._rewards).to.have.length(1);
+      expect(projectedEarnings._rewards[0].token).to.equal(ethers.constants.AddressZero);
+      let eurosInPosition = eurosStake.add(eurosFees.div(2));
+      let estimatedFees = eurosInPosition.mul(ethFees).div(totalEurosInPool);
+      expect(projectedEarnings._rewards[0].amount).to.equal(estimatedFees);
+
+      projectedEarnings = await Staking.projectedEarnings(user2.address);
+      expect(projectedEarnings._rewards).to.have.length(1);
+      expect(projectedEarnings._rewards[0].token).to.equal(ethers.constants.AddressZero);
+      eurosInPosition = eurosStake.mul(3).add(eurosFees.div(2));
+      estimatedFees = eurosInPosition.mul(ethFees).div(totalEurosInPool);
+      expect(projectedEarnings._rewards[0].amount).to.equal(estimatedFees);
+
+      // -- 18 dec erc20 fees --
+
+      await RewardToken18Dec.mint(RewardGateway.address, dec18Fees);
+      await RewardGateway.dropFees();
+      expect(await RewardToken18Dec.balanceOf(Staking.address)).to.equal(dec18Fees);
+
+      projectedEarnings = await Staking.projectedEarnings(user1.address);
+      expect(projectedEarnings._rewards).to.have.length(2);
+      expect(projectedEarnings._rewards[1].token).to.equal(RewardToken18Dec.address);
+      eurosInPosition = eurosStake.add(eurosFees.div(2));
+      estimatedFees = eurosInPosition.mul(dec18Fees).div(totalEurosInPool);
+      expect(projectedEarnings._rewards[1].amount).to.equal(estimatedFees);
+
+      projectedEarnings = await Staking.projectedEarnings(user2.address);
+      expect(projectedEarnings._rewards).to.have.length(2);
+      expect(projectedEarnings._rewards[1].token).to.equal(RewardToken18Dec.address);
+      eurosInPosition = eurosStake.mul(3).add(eurosFees.div(2));
+      estimatedFees = eurosInPosition.mul(dec18Fees).div(totalEurosInPool);
+      expect(projectedEarnings._rewards[1].amount).to.equal(estimatedFees);
+
+      // -- 6 dec erc20 fees --
+
+      await RewardToken6Dec.mint(RewardGateway.address, dec6Fees);
+      await RewardGateway.dropFees();
+      expect(await RewardToken6Dec.balanceOf(Staking.address)).to.equal(dec6Fees);
+
+      projectedEarnings = await Staking.projectedEarnings(user1.address);
+      expect(projectedEarnings._rewards).to.have.length(3);
+      expect(projectedEarnings._rewards[2].token).to.equal(RewardToken6Dec.address);
+      eurosInPosition = eurosStake.add(eurosFees.div(2));
+      estimatedFees = eurosInPosition.mul(dec6Fees).div(totalEurosInPool);
+      expect(projectedEarnings._rewards[2].amount).to.equal(estimatedFees);
+
+      projectedEarnings = await Staking.projectedEarnings(user2.address);
+      expect(projectedEarnings._rewards).to.have.length(3);
+      expect(projectedEarnings._rewards[2].token).to.equal(RewardToken6Dec.address);
+      eurosInPosition = eurosStake.mul(3).add(eurosFees.div(2));
+      estimatedFees = eurosInPosition.mul(dec6Fees).div(totalEurosInPool);
+      expect(projectedEarnings._rewards[2].amount).to.equal(estimatedFees);
+    });
+
+    // it('allows any token to be dropped on staking pool', async () => {
+    //   const tstStake = ethers.utils.parseEther('100');
+    //   await TST.mint(user1.address, tstStake);
+    //   await TST.connect(user1).approve(Staking.address, tstStake);
+    //   await Staking.connect(user1).increaseStake(tstStake, 0);
+
+    //   await TST.mint(user2.address, tstStake);
+    //   await TST.connect(user2).approve(Staking.address, tstStake);
+    //   await Staking.connect(user2).increaseStake(tstStake, 0);
+
+    //   await fastForward(DAY);
+    // });
   });
 });
