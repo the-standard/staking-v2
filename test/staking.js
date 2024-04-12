@@ -471,19 +471,41 @@ describe('Staking', async () => {
       eurosInPosition = eurosStake.mul(3).add(eurosFees.div(2));
       estimatedFees = eurosInPosition.mul(dec6Fees).div(totalEurosInPool);
       expect(projectedEarnings._rewards[2].amount).to.equal(estimatedFees);
+
+      // -- more eth --
+
+      await admin.sendTransaction({to: RewardGateway.address, value: ethFees});
+      await RewardGateway.dropFees();
+      expect(await ethers.provider.getBalance(Staking.address)).to.equal(ethFees.mul(2));
+
+      projectedEarnings = await Staking.projectedEarnings(user1.address);
+      expect(projectedEarnings._rewards).to.have.length(3);
+      expect(projectedEarnings._rewards[0].token).to.equal(ethers.constants.AddressZero);
+      eurosInPosition = eurosStake.add(eurosFees.div(2));
+      estimatedFees = eurosInPosition.mul(ethFees.mul(2)).div(totalEurosInPool);
+      expect(projectedEarnings._rewards[0].amount).to.equal(estimatedFees);
+
+      projectedEarnings = await Staking.projectedEarnings(user2.address);
+      expect(projectedEarnings._rewards).to.have.length(3);
+      expect(projectedEarnings._rewards[0].token).to.equal(ethers.constants.AddressZero);
+      eurosInPosition = eurosStake.mul(3).add(eurosFees.div(2));
+      estimatedFees = eurosInPosition.mul(ethFees.mul(2)).div(totalEurosInPool);
+      expect(projectedEarnings._rewards[0].amount).to.equal(estimatedFees);
     });
 
-    // it('allows any token to be dropped on staking pool', async () => {
-    //   const tstStake = ethers.utils.parseEther('100');
-    //   await TST.mint(user1.address, tstStake);
-    //   await TST.connect(user1).approve(Staking.address, tstStake);
-    //   await Staking.connect(user1).increaseStake(tstStake, 0);
+    it('allows any token to be dropped on staking pool', async () => {
+      const tstStake = ethers.utils.parseEther('100');
+      await TST.mint(user1.address, tstStake);
+      await TST.connect(user1).approve(Staking.address, tstStake);
+      await Staking.connect(user1).increaseStake(tstStake, 0);
 
-    //   await TST.mint(user2.address, tstStake);
-    //   await TST.connect(user2).approve(Staking.address, tstStake);
-    //   await Staking.connect(user2).increaseStake(tstStake, 0);
+      await TST.mint(user2.address, tstStake);
+      await TST.connect(user2).approve(Staking.address, tstStake);
+      await Staking.connect(user2).increaseStake(tstStake, 0);
 
-    //   await fastForward(DAY);
-    // });
+      await fastForward(DAY);
+
+
+    });
   });
 });
