@@ -67,17 +67,6 @@ contract Staking is Ownable, IStaking {
         }
     }
 
-    function increaseStake(uint256 _tst, uint256 _euros) external {
-        if (_tst == 0 && _euros == 0) revert InvalidStake();
-        if (start == 0) start = block.timestamp;
-        starts.push(block.timestamp);
-        positions[msg.sender].start = block.timestamp;
-        positions[msg.sender].TST += _tst;
-        positions[msg.sender].EUROs += _euros;
-        if (_tst > 0) IERC20(TST).safeTransferFrom(msg.sender, address(this), _tst);
-        if (_euros > 0) IERC20(EUROs).safeTransferFrom(msg.sender, address(this), _euros);
-    }
-
     function deleteIndexFromStarts(uint256 _index) private {
         for (uint256 i = _index; i < starts.length - 1; i++) {
             starts[i] = starts[i+1];
@@ -116,7 +105,20 @@ contract Staking is Ownable, IStaking {
         }
 
         deleteStart(_previousStart);
-        if (start == _previousStart) start = earliestStart();
+        if (start == _previousStart || start == 0) start = earliestStart();
+    }
+
+    // TODO this needs to delete old start etc ... write a test for that
+    // should probably also use savePosition
+    function increaseStake(uint256 _tst, uint256 _euros) external {
+        if (_tst == 0 && _euros == 0) revert InvalidStake();
+        Position memory _position = positions[msg.sender];
+        _position.TST += _tst;
+        _position.EUROs += _euros;
+        savePosition(_position);
+
+        if (_tst > 0) IERC20(TST).safeTransferFrom(msg.sender, address(this), _tst);
+        if (_euros > 0) IERC20(EUROs).safeTransferFrom(msg.sender, address(this), _euros);
     }
 
     function decreaseStake(uint256 _tstAmount, uint256 _eurosAmount) external {
