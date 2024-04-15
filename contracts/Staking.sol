@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "contracts/interfaces/IRewardGateway.sol";
 import "contracts/interfaces/IStaking.sol";
 
 import "hardhat/console.sol";
@@ -110,6 +111,7 @@ contract Staking is Ownable, IStaking {
 
     function increaseStake(uint256 _tst, uint256 _euros) external {
         if (_tst == 0 && _euros == 0) revert InvalidStake();
+        IRewardGateway(rewardGateway).dropFees();
         Position memory _position = positions[msg.sender];
         _position.TST += _tst;
         _position.EUROs += _euros;

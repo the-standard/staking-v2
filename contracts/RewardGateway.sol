@@ -4,11 +4,12 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "contracts/interfaces/IStaking.sol";
+import "contracts/interfaces/IRewardGateway.sol";
 import "contracts/interfaces/ITokenManager.sol";
 
 import "hardhat/console.sol";
 
-contract RewardGateway {
+contract RewardGateway is IRewardGateway {
     using SafeERC20 for IERC20;
 
     address immutable private staking;

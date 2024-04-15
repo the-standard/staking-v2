@@ -218,6 +218,28 @@ describe('Staking', async () => {
       position = await Staking.positions(user1.address);
       expect(position.start).to.equal((await ethers.provider.getBlock(increase.blockNumber)).timestamp);
     });
+
+    it('triggers dropping of fees', async () => {
+      const tstStake = ethers.utils.parseEther('10000');
+      await TST.mint(user1.address, tstStake);
+      await TST.connect(user1).approve(Staking.address, tstStake);
+      await Staking.connect(user1).increaseStake(tstStake, 0);
+
+      await fastForward(DAY);
+
+      const eurosFees = ethers.utils.parseEther('10');
+      await EUROs.mint(RewardGateway.address, eurosFees);
+      
+      await TST.mint(user2.address, tstStake);
+      await TST.connect(user2).approve(Staking.address, tstStake);
+      await Staking.connect(user2).increaseStake(tstStake, 0);
+
+      expect(await EUROs.balanceOf(Staking.address)).to.equal(eurosFees);
+      // 1 day staked by user, 1 day total, 50% of TST staked
+      expect((await Staking.projectedEarnings(user1.address))._EUROs).to.equal(eurosFees.div(2));
+      // 0 days staked by user, 0 fees earned yet
+      expect((await Staking.projectedEarnings(user2.address))._EUROs).to.equal(0);
+    });
   });
 
   describe('decreaseStake', async() => {
