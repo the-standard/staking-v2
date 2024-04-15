@@ -108,8 +108,6 @@ contract Staking is Ownable, IStaking {
         if (start == _previousStart || start == 0) start = earliestStart();
     }
 
-    // TODO this needs to delete old start etc ... write a test for that
-    // should probably also use savePosition
     function increaseStake(uint256 _tst, uint256 _euros) external {
         if (_tst == 0 && _euros == 0) revert InvalidStake();
         Position memory _position = positions[msg.sender];
@@ -121,17 +119,17 @@ contract Staking is Ownable, IStaking {
         if (_euros > 0) IERC20(EUROs).safeTransferFrom(msg.sender, address(this), _euros);
     }
 
-    function decreaseStake(uint256 _tstAmount, uint256 _eurosAmount) external {
+    function decreaseStake(uint256 _tst, uint256 _euros) external {
         Position memory _position = positions[msg.sender];
-        if (_tstAmount > _position.TST || _eurosAmount > _position.EUROs) revert InvalidUnstake();
+        if (_tst > _position.TST || _euros > _position.EUROs) revert InvalidUnstake();
         
-        _position.TST -= _tstAmount;
-        _position.EUROs -= _eurosAmount;
+        _position.TST -= _tst;
+        _position.EUROs -= _euros;
 
         savePosition(_position);
 
-        if (_tstAmount > 0) IERC20(TST).safeTransfer(msg.sender, _tstAmount);
-        if (_eurosAmount > 0) IERC20(EUROs).safeTransfer(msg.sender, _eurosAmount);
+        if (_tst > 0) IERC20(TST).safeTransfer(msg.sender, _tst);
+        if (_euros > 0) IERC20(EUROs).safeTransfer(msg.sender, _euros);
     }
 
     function daysStaked(Position memory _position) private view returns (uint256) {
