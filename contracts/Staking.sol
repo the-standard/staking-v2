@@ -12,8 +12,6 @@ import "hardhat/console.sol";
 contract Staking is Ownable, IStaking {
     using SafeERC20 for IERC20;
 
-    uint256 private constant RATE_ACCURACY = 1 ether;
-
     address private immutable TST;
     address private immutable EUROs;
 
@@ -111,7 +109,7 @@ contract Staking is Ownable, IStaking {
 
     function increaseStake(uint256 _tst, uint256 _euros) external {
         IRewardGateway(rewardGateway).dropFees();
-        
+
         if (_tst == 0 && _euros == 0) revert InvalidStake();
         Position memory _position = positions[msg.sender];
         _position.TST += _tst;
@@ -142,6 +140,7 @@ contract Staking is Ownable, IStaking {
     }
 
     function claim() external {
+        IRewardGateway(rewardGateway).dropFees();
         Position memory _position = positions[msg.sender];
         uint256 _euros = calculateEUROs(_position);
         eurosFees -= _euros;

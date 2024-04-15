@@ -421,6 +421,32 @@ describe('Staking', async () => {
       await Staking.connect(user2).claim();
       expect(await EUROs.balanceOf(user2.address)).to.equal(ethers.utils.parseEther('7.5'));
     });
+
+    xit('restarts the user stake');
+
+    it('triggers dropping of fees', async () => {
+      const tstStake = ethers.utils.parseEther('10000');
+      await TST.mint(user1.address, tstStake);
+      await TST.connect(user1).approve(Staking.address, tstStake);
+      await Staking.connect(user1).increaseStake(tstStake, 0);
+      
+      await TST.mint(user2.address, tstStake);
+      await TST.connect(user2).approve(Staking.address, tstStake);
+      await Staking.connect(user2).increaseStake(tstStake, 0);
+
+      await fastForward(DAY);
+
+      const eurosFees = ethers.utils.parseEther('10');
+      await EUROs.mint(RewardGateway.address, eurosFees);
+
+      await Staking.connect(user2).claim();
+
+      // 1 day staked by user, 1 day total, 50% of TST staked, 5 EUROs remaining
+      expect((await Staking.projectedEarnings(user1.address))._EUROs).to.equal(eurosFees.div(4));
+      // their 50% of euros fees is already claimed
+      expect((await Staking.projectedEarnings(user2.address))._EUROs).to.equal(0);
+      expect(await EUROs.balanceOf(user2.address)).to.equal(eurosFees.div(2));
+    });
   });
 
   describe('dropFees', async () => {
@@ -570,5 +596,9 @@ describe('Staking', async () => {
       estimatedFees = eurosStake.mul(2).mul(airdropAmount).div(eurosStake.mul(3));
       expect(projectedEarnings._rewards[0].amount).to.equal(estimatedFees);
     });
+  });
+
+  describe('dropFees', async () => {
+    xit('is only callable by manager address');
   });
 });
