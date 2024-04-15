@@ -110,8 +110,9 @@ contract Staking is Ownable, IStaking {
     }
 
     function increaseStake(uint256 _tst, uint256 _euros) external {
-        if (_tst == 0 && _euros == 0) revert InvalidStake();
         IRewardGateway(rewardGateway).dropFees();
+        
+        if (_tst == 0 && _euros == 0) revert InvalidStake();
         Position memory _position = positions[msg.sender];
         _position.TST += _tst;
         _position.EUROs += _euros;
@@ -122,6 +123,8 @@ contract Staking is Ownable, IStaking {
     }
 
     function decreaseStake(uint256 _tst, uint256 _euros) external {
+        IRewardGateway(rewardGateway).dropFees();
+
         Position memory _position = positions[msg.sender];
         if (_tst > _position.TST || _euros > _position.EUROs) revert InvalidUnstake();
         
