@@ -411,16 +411,18 @@ describe('Staking', async () => {
 
       // euros per tst per day rate = 20 euros / 400 tst / 2 days = 0.025
       // user 1 has 100 TST staked for 2 days = 0.025 * 100 * 2 = 5 EUROs reward
-      await Staking.connect(user1).claim();
+      await Staking.connect(user1).claim(false);
       expect(await EUROs.balanceOf(user1.address)).to.equal(ethers.utils.parseEther('5'))
 
       await fastForward(DAY);
 
       // euros per tst per day rate = 15 euros / 400 tst / 2 days = 0.01875
       // user 2 has 200 TST staked for 2 days = 0.01875 * 200 * 2 = 7.5 EUROs reward
-      await Staking.connect(user2).claim();
+      await Staking.connect(user2).claim(false);
       expect(await EUROs.balanceOf(user2.address)).to.equal(ethers.utils.parseEther('7.5'));
     });
+
+    xit('transfers the users the other tokens');
 
     it('restarts the user stake', async () => {
       const fees = ethers.utils.parseEther('20');
@@ -445,7 +447,7 @@ describe('Staking', async () => {
 
       expect(await Staking.start()).to.equal(ts1);
 
-      await Staking.connect(user1).claim();
+      await Staking.connect(user1).claim(false);
       expect(await Staking.start()).to.equal(ts2);
 
       expect((await Staking.projectedEarnings(user1.address))._EUROs).to.equal(0);
@@ -466,13 +468,40 @@ describe('Staking', async () => {
       const eurosFees = ethers.utils.parseEther('10');
       await EUROs.mint(RewardGateway.address, eurosFees);
 
-      await Staking.connect(user2).claim();
+      await Staking.connect(user2).claim(false);
 
       // 1 day staked by user, 1 day total, 50% of TST staked, 5 EUROs remaining
       expect((await Staking.projectedEarnings(user1.address))._EUROs).to.equal(eurosFees.div(4));
       // their 50% of euros fees is already claimed
       expect((await Staking.projectedEarnings(user2.address))._EUROs).to.equal(0);
       expect(await EUROs.balanceOf(user2.address)).to.equal(eurosFees.div(2));
+    });
+
+    it('has option to compound EUROs when claiming', async () => {
+      const tstStake = ethers.utils.parseEther('20000');
+      const eurosStake = ethers.utils.parseEther('300');
+      await TST.mint(user1.address, tstStake);
+      await TST.connect(user1).approve(Staking.address, tstStake);
+      await EUROs.mint(user1.address, eurosStake);
+      await EUROs.connect(user1).approve(Staking.address, eurosStake);
+      await Staking.connect(user1).increaseStake(tstStake, eurosStake);
+
+      await TST.mint(user2.address, tstStake);
+      await TST.connect(user2).approve(Staking.address, tstStake);
+      await Staking.connect(user2).increaseStake(tstStake, 0);
+
+      const eurosFees = ethers.utils.parseEther('10');
+      await EUROs.mint(RewardGateway.address, eurosFees);
+
+      await fastForward(DAY);
+
+      await Staking.connect(user1).claim(true);
+
+      expect(await EUROs.balanceOf(user1.address)).to.equal(0);
+
+      const position = await Staking.positions(user1.address);
+      expect(position.EUROs).to.equal(eurosStake.add(eurosFees.div(2)));
+
     });
   });
 

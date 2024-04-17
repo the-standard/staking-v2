@@ -139,12 +139,16 @@ contract Staking is Ownable, IStaking {
         return (block.timestamp - _position.start) / 1 days;
     }
 
-    function claim() external {
+    function claim(bool _compound) external {
         IRewardGateway(rewardGateway).dropFees();
         Position memory _position = positions[msg.sender];
         uint256 _euros = calculateEUROs(_position);
         eurosFees -= _euros;
-        IERC20(EUROs).safeTransfer(msg.sender, _euros);
+        if (_compound) {
+            _position.EUROs += _euros;
+        } else {
+            IERC20(EUROs).safeTransfer(msg.sender, _euros);
+        }
         savePosition(_position);
     }
 
