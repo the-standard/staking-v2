@@ -240,6 +240,10 @@ describe('Staking', async () => {
       // 0 days staked by user, 0 fees earned yet
       expect((await Staking.projectedEarnings(user2.address))._EUROs).to.equal(0);
     });
+
+    xit('automatically claims when increasing, compounding');
+    
+    xit('only allows payable addresses to create a stake');
   });
 
   describe('decreaseStake', async() => {
@@ -323,6 +327,8 @@ describe('Staking', async () => {
       // 0 days staked by user, 0 fees earned yet
       expect((await Staking.projectedEarnings(user2.address))._EUROs).to.equal(0);
     });
+
+    xit('automatically claims when increasing, compounding');
   });
 
   describe('projectedEarnings', async () => {
@@ -422,7 +428,37 @@ describe('Staking', async () => {
       expect(await EUROs.balanceOf(user2.address)).to.equal(ethers.utils.parseEther('7.5'));
     });
 
-    xit('transfers the users the other tokens');
+    it('claims the other reward tokens', async () => {
+      const ethFees = ethers.utils.parseEther('0.0005');
+      const dec18Fees = ethers.utils.parseEther('7');
+      const dec6Fees = 8000000;
+      const airdrop = ethers.utils.parseEther('10');
+
+      await admin.sendTransaction({to: RewardGateway.address, value: ethFees});
+      await RewardToken18Dec.mint(RewardGateway.address, dec18Fees);
+      await RewardToken6Dec.mint(RewardGateway.address, dec6Fees);
+
+      await UnofficialRewardToken.mint(admin.address, airdrop);
+      await UnofficialRewardToken.approve(RewardGateway.address, airdrop);
+      await RewardGateway.airdropToken(UnofficialRewardToken.address, airdrop);
+
+      let eurosStake = ethers.utils.parseEther('100');
+      await EUROs.mint(user1.address, eurosStake);
+      await EUROs.connect(user1).approve(Staking.address, eurosStake);
+      await Staking.connect(user1).increaseStake(0, eurosStake);
+
+      await EUROs.mint(user2.address, eurosStake.mul(3));
+      await EUROs.connect(user2).approve(Staking.address, eurosStake.mul(3));
+      await Staking.connect(user2).increaseStake(0, eurosStake.mul(3));
+
+      await fastForward(DAY);
+
+      await Staking.connect(user1).claim(false);
+
+      expect(await RewardToken18Dec.balanceOf(user1.address)).to.equal(dec18Fees.div(4));
+      expect(await RewardToken6Dec.balanceOf(user1.address)).to.equal(dec6Fees / 4);
+      expect(await UnofficialRewardToken.balanceOf(user1.address)).to.equal(airdrop.div(4));
+    });
 
     it('restarts the user stake', async () => {
       const fees = ethers.utils.parseEther('20');
