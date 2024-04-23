@@ -4,23 +4,34 @@
 // You can also run a script with `npx hardhat run <script>`. If you do that, Hardhat
 // will compile your contracts, add the Hardhat Runtime Environment's members to the
 // global scope, and execute the script.
-const hre = require("hardhat");
+const { ethers } = require("hardhat");
 
 async function main() {
-  const currentTimestampInSeconds = Math.round(Date.now() / 1000);
-  const ONE_YEAR_IN_SECS = 365 * 24 * 60 * 60;
-  const unlockTime = currentTimestampInSeconds + ONE_YEAR_IN_SECS;
+  const tstAddress = '0xcD2204188db24d8db2b15151357e43365443B113'
+  const eurosAddress = '0x5D1684E5b989Eb232ac84D6b73D783FE44114C2b'
+  const tokenmanageraddress = '0x18f413879A00Db35A4Ea22300977924E613F3D88'
+  const staking = await (await ethers.getContractFactory('Staking')).deploy(tstAddress, eurosAddress);
+  await staking.deployed();
 
-  const lockedAmount = hre.ethers.utils.parseEther("1");
+  const gateway = await (await ethers.getContractFactory('RewardGateway')).deploy(staking.address, eurosAddress, tokenmanageraddress)
+  await gateway.deployed();
 
-  const Lock = await hre.ethers.getContractFactory("Lock");
-  const lock = await Lock.deploy(unlockTime, { value: lockedAmount });
+  const set = await staking.setRewardGateway(gateway.address);
+  await set.wait();
 
-  await lock.deployed();
+  await run(`verify:verify`, {
+    address: staking.address,
+    constructorArguments: [
+      tstAddress, eurosAddress
+    ],
+  });
 
-  console.log(
-    `Lock with 1 ETH and unlock timestamp ${unlockTime} deployed to ${lock.address}`
-  );
+  await run(`verify:verify`, {
+    address: gateway.address,
+    constructorArguments: [
+      staking.address, eurosAddress, tokenmanageraddress
+    ],
+  });
 }
 
 // We recommend this pattern to be able to use async/await everywhere
