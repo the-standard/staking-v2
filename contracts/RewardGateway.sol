@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
+import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "contracts/interfaces/IStaking.sol";
@@ -9,7 +10,7 @@ import "contracts/interfaces/ITokenManager.sol";
 
 import "hardhat/console.sol";
 
-contract RewardGateway is IRewardGateway {
+contract RewardGateway is IRewardGateway, AccessControl {
     using SafeERC20 for IERC20;
 
     address immutable private staking;
@@ -17,6 +18,7 @@ contract RewardGateway is IRewardGateway {
     address immutable private tokenManager;
     
     constructor(address _staking, address _euros, address _tokenManager) {
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         staking = _staking;
         euros = _euros;
         tokenManager = _tokenManager;
@@ -48,7 +50,7 @@ contract RewardGateway is IRewardGateway {
         }
     }
 
-    function airdropToken(address _token, uint256 _amount) external {
+    function airdropToken(address _token, uint256 _amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (_amount > 0) {
             IERC20(_token).transferFrom(msg.sender, address(this), _amount);
             IERC20(_token).approve(staking, _amount);

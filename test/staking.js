@@ -174,7 +174,7 @@ describe('Staking', async () => {
       await EUROs.mint(user1.address, eurosStake);
 
       let increase = Staking.connect(user1).increaseStake(0, 0);
-      await expect(increase).to.be.revertedWithCustomError(Staking, 'InvalidStake');
+      await expect(increase).to.be.revertedWithCustomError(Staking, 'InvalidRequest');
 
       increase = Staking.connect(user1).increaseStake(tstStake, eurosStake);
       await expect(increase).to.be.revertedWithCustomError(TST, 'ERC20InsufficientAllowance');
@@ -260,8 +260,8 @@ describe('Staking', async () => {
       expect(position.TST).to.equal(tstStake);
       expect(position.EUROs).to.equal(eurosStake);
 
-      await expect(Staking.connect(user1).decreaseStake(tstStake.add(1), 0)).to.be.revertedWithCustomError(Staking, 'InvalidUnstake');
-      await expect(Staking.connect(user1).decreaseStake(0, eurosStake.add(1))).to.be.revertedWithCustomError(Staking, 'InvalidUnstake');
+      await expect(Staking.connect(user1).decreaseStake(tstStake.add(1), 0)).to.be.revertedWithCustomError(Staking, 'InvalidRequest');
+      await expect(Staking.connect(user1).decreaseStake(0, eurosStake.add(1))).to.be.revertedWithCustomError(Staking, 'InvalidRequest');
 
       await expect(Staking.connect(user1).decreaseStake(tstStake.div(2), 0)).not.to.be.reverted;
 
@@ -694,6 +694,14 @@ describe('Staking', async () => {
   });
 
   describe('dropFees', async () => {
-    xit('is only callable by manager address');
+    it('only allows gateway to call staking drop fees', async () => {
+      await expect(Staking.dropFees(ethers.constants.AddressZero, ethers.utils.parseEther('1')))
+        .to.revertedWithCustomError(Staking, 'InvalidRequest');
+    });
+
+    it('only allows admins to do gateway airdrops', async () => {
+      await expect(RewardGateway.connect(user1).airdropToken(UnofficialRewardToken.address, ethers.utils.parseEther('1')))
+        .to.revertedWithCustomError(RewardGateway, 'AccessControlUnauthorizedAccount');
+    });
   });
 });

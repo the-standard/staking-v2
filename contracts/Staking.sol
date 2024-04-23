@@ -25,13 +25,16 @@ contract Staking is Ownable, IStaking {
     struct Reward { address token; uint256 amount; }
     struct Position { uint256 start; uint256 TST; uint256 EUROs; }
 
-    error InvalidStake();
-    error InvalidUnstake();
     error InvalidRequest();
 
     constructor(address _tst, address _euros) Ownable(msg.sender) {
         TST = _tst;
         EUROs = _euros;
+    }
+
+    modifier onlyGateway {
+        if (msg.sender != rewardGateway) revert InvalidRequest();
+        _;
     }
 
     function calculateEUROs(Position memory _position) private view returns (uint256) {
@@ -56,7 +59,7 @@ contract Staking is Ownable, IStaking {
     }
 
     // TODO make this only gateway
-    function dropFees(address _token, uint256 _amount) external payable {
+    function dropFees(address _token, uint256 _amount) external payable onlyGateway {
         if (_token == EUROs) {
             eurosFees += _amount;
         } else {
@@ -112,7 +115,7 @@ contract Staking is Ownable, IStaking {
     function increaseStake(uint256 _tst, uint256 _euros) external {
         IRewardGateway(rewardGateway).dropFees();
 
-        if (_tst == 0 && _euros == 0) revert InvalidStake();
+        if (_tst == 0 && _euros == 0) revert InvalidRequest();
         Position memory _position = positions[msg.sender];
         if (_position.start > 0) runClaim(_position, true);
         _position.TST += _tst;
@@ -128,7 +131,7 @@ contract Staking is Ownable, IStaking {
         Position memory _position = positions[msg.sender];
         runClaim(_position, false);
 
-        if (_tst > _position.TST || _euros > _position.EUROs) revert InvalidUnstake();
+        if (_tst > _position.TST || _euros > _position.EUROs) revert InvalidRequest();
         _position.TST -= _tst;
         _position.EUROs -= _euros;
 
