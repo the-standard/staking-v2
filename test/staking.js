@@ -241,8 +241,24 @@ describe('Staking', async () => {
       expect((await Staking.projectedEarnings(user2.address))._EUROs).to.equal(0);
     });
 
-    xit('automatically claims when increasing, compounding', async () => {
+    it('automatically claims when increasing, compounding', async () => {
+      const tstStake = ethers.utils.parseEther('10000');
+      await TST.mint(user1.address, tstStake.mul(2));
+      await TST.connect(user1).approve(Staking.address, tstStake.mul(2));
+      await Staking.connect(user1).increaseStake(tstStake, 0);
 
+      const ethFees = ethers.utils.parseEther('0.001');
+      const eurosFees = ethers.utils.parseEther('15');
+      await admin.sendTransaction({to: RewardGateway.address, value: ethFees});
+      await EUROs.mint(RewardGateway.address, eurosFees);
+
+      await fastForward(DAY);
+
+      await Staking.connect(user1).increaseStake(tstStake, 0);
+
+      const position = await Staking.positions(user1.address);
+      expect(position.TST).to.equal(tstStake.mul(2));
+      expect(position.EUROs).to.equal(eurosFees);
     });
   });
 
@@ -329,7 +345,9 @@ describe('Staking', async () => {
       expect((await Staking.projectedEarnings(user2.address))._EUROs).to.equal(0);
     });
 
-    xit('automatically claims when decreasing, not compounding');
+    it('automatically claims when decreasing, not compounding', async () => {
+      
+    });
   });
 
   describe('projectedEarnings', async () => {
