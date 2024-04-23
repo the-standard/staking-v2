@@ -328,7 +328,7 @@ describe('Staking', async () => {
       expect((await Staking.projectedEarnings(user2.address))._EUROs).to.equal(0);
     });
 
-    xit('automatically claims when increasing, compounding');
+    xit('automatically claims when decreasing, not compounding');
   });
 
   describe('projectedEarnings', async () => {
@@ -539,6 +539,8 @@ describe('Staking', async () => {
       expect(position.EUROs).to.equal(eurosStake.add(eurosFees.div(2)));
 
     });
+
+    xit('reverts when user has not stake for at least one day')
   });
 
   describe('dropFees', async () => {

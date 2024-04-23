@@ -54,6 +54,7 @@ contract Staking is Ownable, IStaking {
         rewardTokens.push(_token);
     }
 
+    // TODO make this only gateway
     function dropFees(address _token, uint256 _amount) external payable {
         if (_token == EUROs) {
             eurosFees += _amount;
@@ -88,7 +89,7 @@ contract Staking is Ownable, IStaking {
         }
     }
     
-    function empty(Position memory _position) private returns (bool) {
+    function empty(Position memory _position) private pure returns (bool) {
         return _position.TST == 0 && _position.EUROs == 0;
     }
 
@@ -113,6 +114,7 @@ contract Staking is Ownable, IStaking {
 
         if (_tst == 0 && _euros == 0) revert InvalidStake();
         Position memory _position = positions[msg.sender];
+        if (_position.start > 0) claim(true);
         _position.TST += _tst;
         _position.EUROs += _euros;
         savePosition(_position);
@@ -123,6 +125,7 @@ contract Staking is Ownable, IStaking {
 
     function decreaseStake(uint256 _tst, uint256 _euros) external {
         IRewardGateway(rewardGateway).dropFees();
+        claim(false);
 
         Position memory _position = positions[msg.sender];
         if (_tst > _position.TST || _euros > _position.EUROs) revert InvalidUnstake();
@@ -152,7 +155,7 @@ contract Staking is Ownable, IStaking {
         }
     }
 
-    function claim(bool _compound) external {
+    function claim(bool _compound) public {
         IRewardGateway(rewardGateway).dropFees();
         Position memory _position = positions[msg.sender];
         uint256 _euros = calculateEUROs(_position);
@@ -190,6 +193,7 @@ contract Staking is Ownable, IStaking {
         }
     }
 
+    // TODO only owner
     function setRewardGateway(address _rewardGateway) external {
         rewardGateway = _rewardGateway;
     }

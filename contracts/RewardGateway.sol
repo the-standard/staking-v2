@@ -27,8 +27,10 @@ contract RewardGateway is IRewardGateway {
     // call this every time a user increases / decreases / claims
     function dropFees() external {
         uint256 _balance = IERC20(euros).balanceOf(address(this));
-        IERC20(euros).approve(staking, _balance);
-        IStaking(staking).dropFees(euros, _balance);
+        if (_balance > 0) {
+            IERC20(euros).approve(staking, _balance);
+            IStaking(staking).dropFees(euros, _balance);
+        }
 
         ITokenManager.Token[] memory _tokens = ITokenManager(tokenManager).getAcceptedTokens();
         for (uint256 i = 0; i < _tokens.length; i++) {
