@@ -704,4 +704,16 @@ describe('Staking', async () => {
         .to.revertedWithCustomError(RewardGateway, 'AccessControlUnauthorizedAccount');
     });
   });
+
+  describe('setRewardGateway', async () => {
+    it('only allows owner to set reward gateway address', async () => {
+      const newGateway = await (await ethers.getContractFactory('RewardGateway')).deploy(
+        ethers.constants.AddressZero,
+        ethers.constants.AddressZero,
+        ethers.constants.AddressZero
+      );
+      await expect(Staking.connect(user1).setRewardGateway(newGateway.address))
+        .to.be.revertedWithCustomError(Staking, 'OwnableUnauthorizedAccount');
+    });
+  });
 });

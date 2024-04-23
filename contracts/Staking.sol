@@ -201,7 +201,7 @@ contract Staking is Ownable, IStaking {
     }
 
     // TODO only owner
-    function setRewardGateway(address _rewardGateway) external {
+    function setRewardGateway(address _rewardGateway) external onlyOwner {
         rewardGateway = _rewardGateway;
     }
 }
