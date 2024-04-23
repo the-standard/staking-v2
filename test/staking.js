@@ -156,9 +156,9 @@ describe('Staking', async () => {
       expect(await Staking.dailyEuroPerTstRate()).to.equal(ethers.utils.parseEther('.02'));
 
       await Staking.connect(user3).decreaseStake(tstStake, 0);
-      // 4 days, 400 TST, 40 EUROs
+      // 4 days, 400 TST, 32 EUROs (user 3 euros claimed when decreasing stake)
       // .025 EUROs per TST
-      expect(await Staking.dailyEuroPerTstRate()).to.equal(ethers.utils.parseEther('.025'));
+      expect(await Staking.dailyEuroPerTstRate()).to.equal(ethers.utils.parseEther('.02'));
     });
   });
 
@@ -241,9 +241,9 @@ describe('Staking', async () => {
       expect((await Staking.projectedEarnings(user2.address))._EUROs).to.equal(0);
     });
 
-    xit('automatically claims when increasing, compounding');
-    
-    xit('only allows payable addresses to create a stake');
+    xit('automatically claims when increasing, compounding', async () => {
+
+    });
   });
 
   describe('decreaseStake', async() => {
@@ -539,8 +539,6 @@ describe('Staking', async () => {
       expect(position.EUROs).to.equal(eurosStake.add(eurosFees.div(2)));
 
     });
-
-    xit('reverts when user has not stake for at least one day')
   });
 
   describe('dropFees', async () => {
