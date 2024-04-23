@@ -321,9 +321,10 @@ describe('Staking', async () => {
 
       await Staking.connect(user2).decreaseStake(tstStake, 0);
 
-      expect(await EUROs.balanceOf(Staking.address)).to.equal(eurosFees);
+      // fees dropped but half sent to user2 during decrease
+      expect(await EUROs.balanceOf(Staking.address)).to.equal(eurosFees.div(2));
       // 1 day staked by user, 1 day total, 100% of TST staked
-      expect((await Staking.projectedEarnings(user1.address))._EUROs).to.equal(eurosFees);
+      expect((await Staking.projectedEarnings(user1.address))._EUROs).to.equal(eurosFees.div(2));
       // 0 days staked by user, 0 fees earned yet
       expect((await Staking.projectedEarnings(user2.address))._EUROs).to.equal(0);
     });
@@ -399,6 +400,8 @@ describe('Staking', async () => {
       await TST.mint(user1.address, tstStake);
       await TST.connect(user1).approve(Staking.address, tstStake);
       await Staking.connect(user1).increaseStake(tstStake, 0);
+
+      await expect(Staking.connect(user1).claim(false)).to.be.revertedWithCustomError(Staking, 'InvalidRequest')
 
       await fastForward(DAY);
 

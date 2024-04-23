@@ -27,6 +27,7 @@ contract Staking is Ownable, IStaking {
 
     error InvalidStake();
     error InvalidUnstake();
+    error InvalidRequest();
 
     constructor(address _tst, address _euros) Ownable(msg.sender) {
         TST = _tst;
@@ -109,12 +110,11 @@ contract Staking is Ownable, IStaking {
     }
 
     function increaseStake(uint256 _tst, uint256 _euros) external {
-        // require(payable(testAddress).send(0), "blah");
         IRewardGateway(rewardGateway).dropFees();
 
         if (_tst == 0 && _euros == 0) revert InvalidStake();
         Position memory _position = positions[msg.sender];
-        if (_position.start > 0) claim(true);
+        if (_position.start > 0) runClaim(_position, true);
         _position.TST += _tst;
         _position.EUROs += _euros;
         savePosition(_position);
@@ -125,11 +125,10 @@ contract Staking is Ownable, IStaking {
 
     function decreaseStake(uint256 _tst, uint256 _euros) external {
         IRewardGateway(rewardGateway).dropFees();
-        claim(false);
-
         Position memory _position = positions[msg.sender];
+        runClaim(_position, false);
+
         if (_tst > _position.TST || _euros > _position.EUROs) revert InvalidUnstake();
-        
         _position.TST -= _tst;
         _position.EUROs -= _euros;
 
@@ -155,9 +154,7 @@ contract Staking is Ownable, IStaking {
         }
     }
 
-    function claim(bool _compound) public {
-        IRewardGateway(rewardGateway).dropFees();
-        Position memory _position = positions[msg.sender];
+    function runClaim(Position memory _position, bool _compound) private {
         uint256 _euros = calculateEUROs(_position);
         eurosFees -= _euros;
         if (_compound) {
@@ -167,6 +164,13 @@ contract Staking is Ownable, IStaking {
         }
         claimRewards(msg.sender);
         savePosition(_position);
+    }
+
+    function claim(bool _compound) external {
+        IRewardGateway(rewardGateway).dropFees();
+        Position memory _position = positions[msg.sender];
+        if (daysStaked(_position) == 0) revert InvalidRequest();
+        runClaim(_position, _compound);
     }
 
     function totalDays() private view returns (uint256) {
