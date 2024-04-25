@@ -159,13 +159,13 @@ contract Staking is Ownable, IStaking {
 
     function runClaim(Position memory _position, bool _compound) private {
         uint256 _euros = calculateEUROs(_position);
-        eurosFees -= _euros;
         if (_compound) {
             _position.EUROs += _euros;
         } else {
             IERC20(EUROs).safeTransfer(msg.sender, _euros);
         }
         claimRewards(msg.sender);
+        eurosFees -= _euros;
         savePosition(_position);
     }
 
