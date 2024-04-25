@@ -58,8 +58,16 @@ contract Staking is Ownable, IStaking {
             return _euros * _days * _balance / _totalEUROs / _totalDays;
     }
 
-    function dailyEuroPerTstRate() external view returns (uint256) {
-        return calculateEUROs(Position(block.timestamp - 1 days, 1 ether, 0));
+    function dailyYield() external view returns (uint256 _EUROs, Reward[] memory _rewards) {
+        _EUROs = calculateEUROs(Position(block.timestamp - 1 days, 1 ether, 0));
+        _rewards = new Reward[](rewardTokens.length);
+        uint256 _EUROsBalance = IERC20(EUROs).balanceOf(address(this));
+        uint256 _totalDays = totalDays();
+        for (uint256 i = 0; i < rewardTokens.length; i++) {
+            address _token = rewardTokens[i];
+            _rewards[i].token = _token;
+            _rewards[i].amount = calculateReward(_token, 1 ether, 1, _EUROsBalance, _totalDays);
+        }
     }
 
     function addUniqueRewardToken(address _token) private {

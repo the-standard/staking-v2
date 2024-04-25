@@ -78,45 +78,45 @@ describe('Staking', async () => {
     });
   });
 
-  describe('dailyEuroPerTstRate', async () => {
-    it('constantly recalculates interest rate per TST per day in EUROs, based on moving start', async () => {
-      expect(await Staking.dailyEuroPerTstRate()).to.equal(0);
+  describe('dailyYield', async () => {
+    it.only('constantly recalculates yields', async () => {
+      expect((await Staking.dailyYield())._EUROs).to.equal(0);
 
       const tstStake = ethers.utils.parseEther('100');
       await TST.mint(user1.address, tstStake);
       await TST.connect(user1).approve(Staking.address, tstStake);
       await Staking.connect(user1).increaseStake(tstStake, 0);
       // 0 day, 100 TST, 0 EUROs
-      expect(await Staking.dailyEuroPerTstRate()).to.equal(0);
+      expect((await Staking.dailyYield())._EUROs).to.equal(0);
 
       const fees = ethers.utils.parseEther('10')
       await EUROs.mint(RewardGateway.address, fees)
       await RewardGateway.dropFees();
 
       // 0 day, 100 TST, 100 EUROs
-      expect(await Staking.dailyEuroPerTstRate()).to.equal(0);
+      expect((await Staking.dailyYield())._EUROs).to.equal(0);
       await fastForward(DAY);
       // 1 day, 100 TST, 10 EUROs
       // .1 EUROs per TST
-      expect(await Staking.dailyEuroPerTstRate()).to.equal(ethers.utils.parseEther('.1'));
+      expect((await Staking.dailyYield())._EUROs).to.equal(ethers.utils.parseEther('.1'));
 
       await TST.mint(user2.address, tstStake);
       await TST.connect(user2).approve(Staking.address, tstStake);
       await Staking.connect(user2).increaseStake(tstStake, 0);
       // 1 day, 200 TST, 10 EUROs
       // .05 EUROs per TST
-      expect(await Staking.dailyEuroPerTstRate()).to.equal(ethers.utils.parseEther('0.05'));
+      expect((await Staking.dailyYield())._EUROs).to.equal(ethers.utils.parseEther('0.05'));
 
       await EUROs.mint(RewardGateway.address, fees)
       await RewardGateway.dropFees();
       // 1 day, 200 TST, 20 EUROs
       // .1 EUROs per TST
-      expect(await Staking.dailyEuroPerTstRate()).to.equal(ethers.utils.parseEther('.1'));
+      expect((await Staking.dailyYield())._EUROs).to.equal(ethers.utils.parseEther('.1'));
 
       await fastForward(DAY);
       // 2 days, 200 TST, 20 EUROs
       // .05 EUROs per TST
-      expect(await Staking.dailyEuroPerTstRate()).to.equal(ethers.utils.parseEther('0.05'));
+      expect((await Staking.dailyYield())._EUROs).to.equal(ethers.utils.parseEther('0.05'));
 
       // user 3 stakes double stake amount
       await TST.mint(user3.address, tstStake.mul(2));
@@ -124,41 +124,112 @@ describe('Staking', async () => {
       await Staking.connect(user3).increaseStake(tstStake.mul(2), 0);
       // 2 days, 400 TST, 20 EUROs
       // .05 EUROs per TST
-      expect(await Staking.dailyEuroPerTstRate()).to.equal(ethers.utils.parseEther('.025'));
+      expect((await Staking.dailyYield())._EUROs).to.equal(ethers.utils.parseEther('.025'));
 
       await EUROs.mint(RewardGateway.address, fees)
       await RewardGateway.dropFees();
       // 2 days, 400 TST, 30 EUROs
       // .0375 EUROs per TST
-      expect(await Staking.dailyEuroPerTstRate()).to.equal(ethers.utils.parseEther('.0375'));
+      expect((await Staking.dailyYield())._EUROs).to.equal(ethers.utils.parseEther('.0375'));
 
       await fastForward(DAY);
       // 3 days, 400 TST, 30 EUROs
       // .025 EUROs per TST
-      expect(await Staking.dailyEuroPerTstRate()).to.equal(ethers.utils.parseEther('0.025'));
+      expect((await Staking.dailyYield())._EUROs).to.equal(ethers.utils.parseEther('0.025'));
 
       await TST.mint(user4.address, tstStake);
       await TST.connect(user4).approve(Staking.address, tstStake);
       stake = await Staking.connect(user4).increaseStake(tstStake, 0);
       // 3 days, 500 TST, 30 EUROs
       // .02 EUROs per TST
-      expect(await Staking.dailyEuroPerTstRate()).to.equal(ethers.utils.parseEther('0.02'));
+      expect((await Staking.dailyYield())._EUROs).to.equal(ethers.utils.parseEther('0.02'));
 
       await fastForward(DAY);
       // 4 days, 500 TST, 30 EUROs
       // .015 EUROs per TST
-      expect(await Staking.dailyEuroPerTstRate()).to.equal(ethers.utils.parseEther('0.015'));
+      expect((await Staking.dailyYield())._EUROs).to.equal(ethers.utils.parseEther('0.015'));
 
       await EUROs.mint(RewardGateway.address, fees)
       await RewardGateway.dropFees();
       // 4 days, 500 TST, 40 EUROs
       // .02 EUROs per TST
-      expect(await Staking.dailyEuroPerTstRate()).to.equal(ethers.utils.parseEther('.02'));
+      expect((await Staking.dailyYield())._EUROs).to.equal(ethers.utils.parseEther('.02'));
 
       await Staking.connect(user3).decreaseStake(tstStake, 0);
       // 4 days, 400 TST, 32 EUROs (user 3 euros claimed when decreasing stake)
       // .025 EUROs per TST
-      expect(await Staking.dailyEuroPerTstRate()).to.equal(ethers.utils.parseEther('.02'));
+      expect((await Staking.dailyYield())._EUROs).to.equal(ethers.utils.parseEther('.02'));
+
+      const eurosStake = ethers.utils.parseEther('18');
+      await EUROs.mint(user1.address, eurosStake);
+      await EUROs.connect(user1).approve(Staking.address, eurosStake);
+      await Staking.connect(user1).increaseStake(0, eurosStake);
+
+      let yield = await Staking.dailyYield();
+      // user 1 has claimed 8 EUROs while increasing
+      // 3 days, 400 TST, 24 EUROs
+      expect(yield._EUROs).to.equal(ethers.utils.parseEther('.02'));
+      // no rewards yet
+      expect(yield._rewards).to.have.length(0);
+
+      const ethFees = ethers.utils.parseEther('0.01')
+      await admin.sendTransaction({to: RewardGateway.address, value: ethFees});
+      await RewardGateway.dropFees();
+
+      await fastForward(DAY);
+
+      yield = await Staking.dailyYield();
+      // 4 days, 400 TST, 24 EUROs
+      expect(yield._EUROs).to.equal(ethers.utils.parseEther('0.015'))
+      expect(yield._rewards).to.have.length(1);
+      // 4 days, 50 euros, 0.01 ETH
+      expect(yield._rewards[0].token).to.equal(ethers.constants.AddressZero);
+      expect(yield._rewards[0].amount).to.equal(ethers.utils.parseEther('0.00005'));
+
+      const usdFees = 2000000;
+      await EUROs.mint(RewardGateway.address, fees.mul(3))
+      await admin.sendTransaction({to: RewardGateway.address, value: ethFees});
+      await RewardToken6Dec.mint(RewardGateway.address, usdFees);
+      await RewardGateway.dropFees();
+
+      await fastForward(DAY);
+
+      yield = await Staking.dailyYield();
+      // 5 days, 400 TST, 54 EUROs
+      expect(yield._EUROs).to.equal(ethers.utils.parseEther('0.027'))
+      expect(yield._rewards).to.have.length(2);
+      // 5 days, 80 euros, 0.02 ETH
+      expect(yield._rewards[0].token).to.equal(ethers.constants.AddressZero);
+      expect(yield._rewards[0].amount).to.equal(ethers.utils.parseEther('0.00005'));
+      // 2 USD
+      expect(yield._rewards[1].token).to.equal(RewardToken6Dec.address);
+      expect(yield._rewards[1].amount).to.equal(5000);
+
+      await EUROs.mint(RewardGateway.address, fees.mul(2))
+      await admin.sendTransaction({to: RewardGateway.address, value: ethFees.mul(2)});
+      await RewardToken6Dec.mint(RewardGateway.address, usdFees * 4);
+      await RewardGateway.dropFees();
+      
+      const airdrop = ethers.utils.parseEther('20');
+      await UnofficialRewardToken.mint(admin.address, airdrop);
+      await UnofficialRewardToken.approve(RewardGateway.address, airdrop);
+      await RewardGateway.airdropToken(UnofficialRewardToken.address, airdrop);
+
+      await fastForward(5 * DAY);
+
+      yield = await Staking.dailyYield();
+      // 10 days, 400 TST, 74 EUROs
+      expect(yield._EUROs).to.equal(ethers.utils.parseEther('0.0185'))
+      expect(yield._rewards).to.have.length(3);
+      // 10 days, 100 euros, 0.04 ETH
+      expect(yield._rewards[0].token).to.equal(ethers.constants.AddressZero);
+      expect(yield._rewards[0].amount).to.equal(ethers.utils.parseEther('0.00004'));
+      // 10 USD
+      expect(yield._rewards[1].token).to.equal(RewardToken6Dec.address);
+      expect(yield._rewards[1].amount).to.equal(10000);
+      // 20 airdrop tokens
+      expect(yield._rewards[2].token).to.equal(UnofficialRewardToken.address);
+      expect(yield._rewards[2].amount).to.equal(ethers.utils.parseEther('0.02'));
     });
   });
 
