@@ -26,7 +26,6 @@ contract RewardGateway is IRewardGateway, AccessControl {
 
     receive() external payable {}
 
-    // call this every time a user increases / decreases / claims
     function dropFees() external {
         uint256 _balance = IERC20(euros).balanceOf(address(this));
         if (_balance > 0) {
