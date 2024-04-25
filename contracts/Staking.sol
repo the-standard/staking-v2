@@ -37,6 +37,10 @@ contract Staking is Ownable, IStaking {
         _;
     }
 
+    function totalDays() private view returns (uint256) {
+        return (block.timestamp - start) / 1 days;
+    }
+
     function calculateEUROs(Position memory _position) private view returns (uint256) {
         uint256 _totalDays = totalDays();
         uint256 _balance = IERC20(TST).balanceOf(address(this));
@@ -44,6 +48,14 @@ contract Staking is Ownable, IStaking {
             return _position.TST * daysStaked(_position) * eurosFees
                 / _balance / _totalDays;
         }
+    }
+
+    function calculateReward(address _token, uint256 _euros, uint256 _days, uint256 _totalEUROs, uint256 _totalDays) private view returns (uint256) {
+        uint256 _balance = _token == address(0) ?
+            address(this).balance :
+            IERC20(_token).balanceOf(address(this));
+        if (_totalEUROs > 0 && _totalDays > 0)
+            return _euros * _days * _balance / _totalEUROs / _totalDays;
     }
 
     function dailyEuroPerTstRate() external view returns (uint256) {
@@ -149,7 +161,8 @@ contract Staking is Ownable, IStaking {
         for (uint256 i = 0; i < _rewards.length; i++) {
             Reward memory _reward = _rewards[i];
             if (_reward.token == address(0)) {
-                _holder.call{value: _reward.amount}("");
+                (bool sent,) = _holder.call{value: _reward.amount}("");
+                require(sent);
             } else {
                 IERC20(_reward.token).safeTransfer(_holder, _reward.amount);
             }
@@ -175,27 +188,20 @@ contract Staking is Ownable, IStaking {
         runClaim(_position, _compound);
     }
 
-    function totalDays() private view returns (uint256) {
-        return (block.timestamp - start) / 1 days;
-    }
-
     function projectedEarnings(address _holder) public view returns (uint256 _EUROs, Reward[] memory _rewards) {
         Position memory _position = positions[_holder];
         _EUROs = calculateEUROs(_position);
+        uint256 _totalEUROs = IERC20(EUROs).balanceOf(address(this));
+        uint256 _totalDays = totalDays();
         
         _rewards = new Reward[](rewardTokens.length);
         for (uint256 i = 0; i < rewardTokens.length; i++) {
             address _rewardToken = rewardTokens[i];
-            uint256 _balance = _rewardToken == address(0) ?
-                address(this).balance :
-                IERC20(_rewardToken).balanceOf(address(this));
-
             _rewards[i].token = _rewardToken;
-            uint256 _totalEUROs = IERC20(EUROs).balanceOf(address(this));
-            uint256 _totalDays = totalDays();
-            if (_totalEUROs > 0 && _totalDays > 0)
-            _rewards[i].amount = (_position.EUROs + _EUROs) * daysStaked(_position) * _balance
-                / _totalEUROs / _totalDays;
+            _rewards[i].amount = calculateReward(
+                _rewardToken, _position.EUROs + _EUROs,
+                daysStaked(_position), _totalEUROs, _totalDays
+            );
         }
     }
 
