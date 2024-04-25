@@ -363,14 +363,14 @@ describe('Staking', async () => {
 
       await fastForward(DAY);
 
-      await Staking.connect(user1).decreaseStake(tstStake.div(2));
+      await Staking.connect(user1).decreaseStake(tstStake.div(2), 0);
 
       const position = await Staking.positions(user1.address);
       expect(position.TST).to.equal(tstStake.div(2));
       expect(position.EUROs).to.equal(0);
       const projected = await Staking.projectedEarnings(user1.address);
-      expect(projected.EUROs).to.equal(0);
-      expect(projected[0].amount).to.equal(0);
+      expect(projected._EUROs).to.equal(0);
+      expect(projected._rewards[0].amount).to.equal(0);
       expect(await EUROs.balanceOf(user1.address)).to.equal(eurosFees);
       expect(await RewardToken6Dec.balanceOf(user1.address)).to.equal(usdFees);
     });
