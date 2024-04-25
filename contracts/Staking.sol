@@ -145,8 +145,7 @@ contract Staking is Ownable, IStaking {
         return (block.timestamp - _position.start) / 1 days;
     }
 
-    function claimRewards(address _holder) private {
-        (, Reward[] memory _rewards) = projectedEarnings(_holder);
+    function claimRewards(address _holder, Reward[] memory _rewards) private {
         for (uint256 i = 0; i < _rewards.length; i++) {
             Reward memory _reward = _rewards[i];
             if (_reward.token == address(0)) {
@@ -158,14 +157,14 @@ contract Staking is Ownable, IStaking {
     }
 
     function runClaim(Position memory _position, bool _compound) private {
-        uint256 _euros = calculateEUROs(_position);
+        (uint256 _euros, Reward[] memory _rewards) = projectedEarnings(msg.sender);
+        claimRewards(msg.sender, _rewards);
+        eurosFees -= _euros;
         if (_compound) {
             _position.EUROs += _euros;
         } else {
             IERC20(EUROs).safeTransfer(msg.sender, _euros);
         }
-        claimRewards(msg.sender);
-        eurosFees -= _euros;
         savePosition(_position);
     }
 
