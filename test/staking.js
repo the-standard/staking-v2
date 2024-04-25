@@ -26,7 +26,9 @@ describe('Staking', async () => {
     const MockTokenManager = await (await ethers.getContractFactory('MockTokenManager')).deploy(
       [RewardToken18Dec.address, RewardToken6Dec.address]
     );
-    RewardGateway = await (await ethers.getContractFactory('RewardGateway')).deploy(Staking.address, EUROs.address, MockTokenManager.address);
+    RewardGateway = await (await ethers.getContractFactory('RewardGateway')).deploy(
+      Staking.address, EUROs.address, MockTokenManager.address, ethers.constants.AddressZero
+    );
     await Staking.setRewardGateway(RewardGateway.address);
   });
 
@@ -79,7 +81,7 @@ describe('Staking', async () => {
   });
 
   describe('dailyYield', async () => {
-    it.only('constantly recalculates yields', async () => {
+    it('constantly recalculates yields', async () => {
       expect((await Staking.dailyYield())._EUROs).to.equal(0);
 
       const tstStake = ethers.utils.parseEther('100');
@@ -823,6 +825,7 @@ describe('Staking', async () => {
   describe('setRewardGateway', async () => {
     it('only allows owner to set reward gateway address', async () => {
       const newGateway = await (await ethers.getContractFactory('RewardGateway')).deploy(
+        ethers.constants.AddressZero,
         ethers.constants.AddressZero,
         ethers.constants.AddressZero,
         ethers.constants.AddressZero

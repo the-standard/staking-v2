@@ -4,8 +4,10 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "contracts/interfaces/IStaking.sol";
+import "contracts/interfaces/IEUROs.sol";
 import "contracts/interfaces/IRewardGateway.sol";
+import "contracts/interfaces/ISmartVaultManager.sol";
+import "contracts/interfaces/IStaking.sol";
 import "contracts/interfaces/ITokenManager.sol";
 
 import "hardhat/console.sol";
@@ -16,12 +18,14 @@ contract RewardGateway is IRewardGateway, AccessControl {
     address immutable private staking;
     address immutable private euros;
     address immutable private tokenManager;
+    address immutable private smartVaultManager;
     
-    constructor(address _staking, address _euros, address _tokenManager) {
+    constructor(address _staking, address _euros, address _tokenManager, address _smartVaultManager) {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         staking = _staking;
         euros = _euros;
         tokenManager = _tokenManager;
+        smartVaultManager = _smartVaultManager;
     }
 
     receive() external payable {}
@@ -54,6 +58,25 @@ contract RewardGateway is IRewardGateway, AccessControl {
             IERC20(_token).transferFrom(msg.sender, address(this), _amount);
             IERC20(_token).approve(staking, _amount);
             IStaking(staking).dropFees(_token, _amount);
+        }
+    }
+
+    function liquidateVault(uint256 _tokenID) external {
+        uint256 _minted = ISmartVaultManager(smartVaultManager).vaultData(_tokenID).status.minted;
+        IEUROs(euros).burn(msg.sender, _minted);
+        ISmartVaultManager(smartVaultManager).liquidateVault(_tokenID);
+        ITokenManager.Token[] memory _tokens = ITokenManager(tokenManager).getAcceptedTokens();
+        for (uint256 i = 0; i < _tokens.length; i++) {
+            ITokenManager.Token memory _token = _tokens[i];
+            if (_token.addr == address(0)) {
+                uint256 _balance = address(this).balance;
+                if (_balance > 0) payable(msg.sender).call{ value: _balance }("");
+            } else {
+                uint256 _balance = IERC20(_token.addr).balanceOf(address(this));
+                if (_balance > 0) {
+                    IERC20(_token.addr).safeTransfer(msg.sender, _balance);
+                }
+            }
         }
     }
 }
