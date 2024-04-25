@@ -70,7 +70,6 @@ contract Staking is Ownable, IStaking {
         rewardTokens.push(_token);
     }
 
-    // TODO make this only gateway
     function dropFees(address _token, uint256 _amount) external payable onlyGateway {
         if (_token == EUROs) {
             eurosFees += _amount;
@@ -205,7 +204,6 @@ contract Staking is Ownable, IStaking {
         }
     }
 
-    // TODO only owner
     function setRewardGateway(address _rewardGateway) external onlyOwner {
         rewardGateway = _rewardGateway;
     }
