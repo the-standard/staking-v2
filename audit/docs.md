@@ -25,7 +25,7 @@ Fundamentals:
 - projectedEarnings should show the amount of EUROs, and all the other reward assets, that have potentially be earned (if a user was to claim at that moment)
 - dailyYield should show the daily EUROs yield for 1 TST, and the daily yield for all other reward assets for 1 EUROs
 
-Deployment details:
+## Deployment details
 
 - Contract will be deployed to Arbitrum One
 - [TST](https://arbiscan.io/token/0xf5a27e55c748bcddbfea5477cb9ae924f0f7fd2e)
@@ -41,7 +41,7 @@ Deployment details:
     - [SUSHI](https://arbiscan.io/token/0xd4d42f0b6def4ce0383636770ef773390d85c61a)
 - Via the `airdropToken` function in RewardGateway, admins can also drop other reward tokens on stakers, so there may be other reward tokens too
 
-Issues / questions:
+## Issues / questions:
 
 - Not really an "issue" but the daily yield and projected earnings are both variable, based on the total amount staked etc
     - The projected earnings of a user could therefore decrease, or the yield could be less than a user sees when initially staking
