@@ -7,8 +7,6 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "contracts/interfaces/IRewardGateway.sol";
 import "contracts/interfaces/IStaking.sol";
 
-import "hardhat/console.sol";
-
 contract Staking is Ownable, IStaking {
     using SafeERC20 for IERC20;
 
