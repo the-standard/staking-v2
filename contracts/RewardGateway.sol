@@ -30,7 +30,7 @@ contract RewardGateway is IRewardGateway, AccessControl {
 
     receive() external payable {}
 
-    function dropFees() external {
+    function dropFees() public {
         uint256 _balance = IERC20(euros).balanceOf(address(this));
         if (_balance > 0) {
             IERC20(euros).approve(staking, _balance);
@@ -61,7 +61,10 @@ contract RewardGateway is IRewardGateway, AccessControl {
         }
     }
 
+
+    // TODO test this drops fees before liquidation
     function liquidateVault(uint256 _tokenID) external {
+        dropFees();
         uint256 _minted = ISmartVaultManager(smartVaultManager).vaultData(_tokenID).status.minted;
         IEUROs(euros).burn(msg.sender, _minted);
         ISmartVaultManager(smartVaultManager).liquidateVault(_tokenID);
@@ -70,7 +73,10 @@ contract RewardGateway is IRewardGateway, AccessControl {
             ITokenManager.Token memory _token = _tokens[i];
             if (_token.addr == address(0)) {
                 uint256 _balance = address(this).balance;
-                if (_balance > 0) payable(msg.sender).call{ value: _balance }("");
+                if (_balance > 0) {
+                    (bool _sent,) = payable(msg.sender).call{ value: _balance }("");
+                    require(_sent);
+                }
             } else {
                 uint256 _balance = IERC20(_token.addr).balanceOf(address(this));
                 if (_balance > 0) {
