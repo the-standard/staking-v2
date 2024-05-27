@@ -56,4 +56,6 @@ describe('RewardGateway', async () => {
     expect(await RewardToken6Dec.balanceOf(user1.address)).to.equal(collateral6Dec);
     expect(await ethers.provider.getBalance(user1.address)).to.be.greaterThan(ethers.utils.parseEther('10000'));
   });
+
+  xit('transfers fees before running liquidation');
 });

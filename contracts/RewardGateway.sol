@@ -10,8 +10,6 @@ import "contracts/interfaces/ISmartVaultManager.sol";
 import "contracts/interfaces/IStaking.sol";
 import "contracts/interfaces/ITokenManager.sol";
 
-import "hardhat/console.sol";
-
 contract RewardGateway is IRewardGateway, AccessControl {
     using SafeERC20 for IERC20;
 
@@ -61,8 +59,6 @@ contract RewardGateway is IRewardGateway, AccessControl {
         }
     }
 
-
-    // TODO test this drops fees before liquidation
     function liquidateVault(uint256 _tokenID) external {
         dropFees();
         uint256 _minted = ISmartVaultManager(smartVaultManager).vaultData(_tokenID).status.minted;
