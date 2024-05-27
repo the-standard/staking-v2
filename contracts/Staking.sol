@@ -4,10 +4,11 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "contracts/interfaces/IRewardGateway.sol";
 import "contracts/interfaces/IStaking.sol";
 
-contract Staking is Ownable, IStaking {
+contract Staking is Ownable, IStaking, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     address private immutable TST;
@@ -169,7 +170,7 @@ contract Staking is Ownable, IStaking {
         return (block.timestamp - _position.start) / 1 days;
     }
 
-    function _claimRewards(address _holder, Reward[] memory _rewards) private {
+    function _claimRewards(address _holder, Reward[] memory _rewards) private nonReentrant() {
         for (uint256 i = 0; i < _rewards.length; i++) {
             Reward memory _reward = _rewards[i];
             if (_reward.token == address(0)) {
