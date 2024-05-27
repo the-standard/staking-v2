@@ -834,4 +834,8 @@ describe('Staking', async () => {
         .to.be.revertedWithCustomError(Staking, 'OwnableUnauthorizedAccount');
     });
   });
+
+  describe('events', async () => {
+    xit('should emit events');
+  });
 });

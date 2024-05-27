@@ -23,6 +23,10 @@ contract Staking is Ownable, IStaking {
     struct Reward { address token; uint256 amount; }
     struct Position { uint256 start; uint256 TST; uint256 EUROs; }
 
+    event StakeIncreased(address indexed holder, uint256 TST, uint256 EUROs);
+    event StakeDecreased (address indexed holder, uint256 TST, uint256 EUROs);
+    event RewardsClaimed (address indexed holder);
+
     error InvalidRequest();
 
     constructor(address _tst, address _euros) Ownable(msg.sender) {
@@ -142,6 +146,7 @@ contract Staking is Ownable, IStaking {
 
         if (_tst > 0) IERC20(TST).safeTransferFrom(msg.sender, address(this), _tst);
         if (_euros > 0) IERC20(EUROs).safeTransferFrom(msg.sender, address(this), _euros);
+        emit StakeIncreased(msg.sender, _tst, _euros);
     }
 
     function decreaseStake(uint256 _tst, uint256 _euros) external {
@@ -157,6 +162,7 @@ contract Staking is Ownable, IStaking {
 
         if (_tst > 0) IERC20(TST).safeTransfer(msg.sender, _tst);
         if (_euros > 0) IERC20(EUROs).safeTransfer(msg.sender, _euros);
+        emit StakeDecreased(msg.sender, _tst, _euros);
     }
 
     function daysStaked(Position memory _position) private view returns (uint256) {
@@ -192,6 +198,7 @@ contract Staking is Ownable, IStaking {
         Position memory _position = positions[msg.sender];
         if (daysStaked(_position) == 0) revert InvalidRequest();
         runClaim(_position, _compound);
+        emit RewardsClaimed(msg.sender);
     }
 
     function projectedEarnings(address _holder) public view returns (uint256 _EUROs, Reward[] memory _rewards) {
