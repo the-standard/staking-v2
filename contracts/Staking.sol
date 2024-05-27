@@ -39,21 +39,21 @@ contract Staking is Ownable, IStaking {
         _;
     }
 
-    function totalDays() private view returns (uint256) {
+    function _totalDays() private view returns (uint256) {
         if (start == 0) return 0;
         return (block.timestamp - start) / 1 days;
     }
 
-    function calculateEUROs(Position memory _position) private view returns (uint256) {
-        uint256 _totalDays = totalDays();
+    function _calculateEUROs(Position memory _position) private view returns (uint256) {
+        uint256 _totalDays = _totalDays();
         uint256 _balance = IERC20(TST).balanceOf(address(this));
         if (_totalDays > 0 && _balance > 0) {
-            return _position.TST * daysStaked(_position) * eurosFees
+            return _position.TST * _daysStaked(_position) * eurosFees
                 / _balance / _totalDays;
         }
     }
 
-    function calculateReward(address _token, uint256 _euros, uint256 _days, uint256 _totalEUROs, uint256 _totalDays) private view returns (uint256) {
+    function _calculateReward(address _token, uint256 _euros, uint256 _days, uint256 _totalEUROs, uint256 _totalDays) private view returns (uint256) {
         uint256 _balance = _token == address(0) ?
             address(this).balance :
             IERC20(_token).balanceOf(address(this));
@@ -62,18 +62,18 @@ contract Staking is Ownable, IStaking {
     }
 
     function dailyYield() external view returns (uint256 _EUROs, Reward[] memory _rewards) {
-        _EUROs = calculateEUROs(Position(block.timestamp - 1 days, 1 ether, 0));
+        _EUROs = _calculateEUROs(Position(block.timestamp - 1 days, 1 ether, 0));
         _rewards = new Reward[](rewardTokens.length);
         uint256 _EUROsBalance = IERC20(EUROs).balanceOf(address(this));
-        uint256 _totalDays = totalDays();
+        uint256 _totalDays = _totalDays();
         for (uint256 i = 0; i < rewardTokens.length; i++) {
             address _token = rewardTokens[i];
             _rewards[i].token = _token;
-            _rewards[i].amount = calculateReward(_token, 1 ether, 1, _EUROsBalance, _totalDays);
+            _rewards[i].amount = _calculateReward(_token, 1 ether, 1, _EUROsBalance, _totalDays);
         }
     }
 
-    function addUniqueRewardToken(address _token) private {
+    function _addUniqueRewardToken(address _token) private {
         for (uint256 i = 0; i < rewardTokens.length; i++) {
             if (rewardTokens[i] == _token) return;
         }
@@ -85,7 +85,7 @@ contract Staking is Ownable, IStaking {
         if (_token == EUROs) {
             eurosFees += _amount;
         } else {
-            addUniqueRewardToken(_token);
+            _addUniqueRewardToken(_token);
         }
         
         if (_token != address(0)) {
@@ -93,36 +93,36 @@ contract Staking is Ownable, IStaking {
         }
     }
 
-    function deleteIndexFromStarts(uint256 _index) private {
+    function _deleteIndexFromStarts(uint256 _index) private {
         for (uint256 i = _index; i < starts.length - 1; i++) {
             starts[i] = starts[i+1];
         }
         starts.pop();
     }
 
-    function deleteStart(uint256 _ts) private {
+    function _deleteStart(uint256 _ts) private {
         for (uint256 i = 0; i < starts.length; i++) {
             if (_ts == starts[i]) {
-                deleteIndexFromStarts(i);
+                _deleteIndexFromStarts(i);
                 return;
             }
         }
     }
 
-    function earliestStart() private view returns (uint256 _start) {
+    function _earliestStart() private view returns (uint256 _start) {
         for (uint256 i = 0; i < starts.length; i++) {
             if (_start == 0 || starts[i] < _start) _start = starts[i];
         }
     }
     
-    function empty(Position memory _position) private pure returns (bool) {
+    function _empty(Position memory _position) private pure returns (bool) {
         return _position.TST == 0 && _position.EUROs == 0;
     }
 
-    function savePosition(Position memory _position) private {
+    function _savePosition(Position memory _position) private {
         uint256 _previousStart = _position.start;
 
-        if (empty(_position)) {
+        if (_empty(_position)) {
             delete positions[msg.sender];
         } else {
             _position.start = block.timestamp;
@@ -130,8 +130,8 @@ contract Staking is Ownable, IStaking {
             positions[msg.sender] = _position;
         }
 
-        deleteStart(_previousStart);
-        if (start == _previousStart || start == 0) start = earliestStart();
+        _deleteStart(_previousStart);
+        if (start == _previousStart || start == 0) start = _earliestStart();
     }
 
     function increaseStake(uint256 _tst, uint256 _euros) external {
@@ -139,10 +139,10 @@ contract Staking is Ownable, IStaking {
 
         if (_tst == 0 && _euros == 0) revert InvalidRequest();
         Position memory _position = positions[msg.sender];
-        if (_position.start > 0) runClaim(_position, true);
+        if (_position.start > 0) _runClaim(_position, true);
         _position.TST += _tst;
         _position.EUROs += _euros;
-        savePosition(_position);
+        _savePosition(_position);
 
         if (_tst > 0) IERC20(TST).safeTransferFrom(msg.sender, address(this), _tst);
         if (_euros > 0) IERC20(EUROs).safeTransferFrom(msg.sender, address(this), _euros);
@@ -152,24 +152,24 @@ contract Staking is Ownable, IStaking {
     function decreaseStake(uint256 _tst, uint256 _euros) external {
         IRewardGateway(rewardGateway).dropFees();
         Position memory _position = positions[msg.sender];
-        runClaim(_position, false);
+        _runClaim(_position, false);
 
         if (_tst > _position.TST || _euros > _position.EUROs) revert InvalidRequest();
         _position.TST -= _tst;
         _position.EUROs -= _euros;
 
-        savePosition(_position);
+        _savePosition(_position);
 
         if (_tst > 0) IERC20(TST).safeTransfer(msg.sender, _tst);
         if (_euros > 0) IERC20(EUROs).safeTransfer(msg.sender, _euros);
         emit StakeDecreased(msg.sender, _tst, _euros);
     }
 
-    function daysStaked(Position memory _position) private view returns (uint256) {
+    function _daysStaked(Position memory _position) private view returns (uint256) {
         return (block.timestamp - _position.start) / 1 days;
     }
 
-    function claimRewards(address _holder, Reward[] memory _rewards) private {
+    function _claimRewards(address _holder, Reward[] memory _rewards) private {
         for (uint256 i = 0; i < _rewards.length; i++) {
             Reward memory _reward = _rewards[i];
             if (_reward.token == address(0)) {
@@ -181,7 +181,7 @@ contract Staking is Ownable, IStaking {
         }
     }
 
-    function runClaim(Position memory _position, bool _compound) private {
+    function _runClaim(Position memory _position, bool _compound) private {
         (uint256 _euros, Reward[] memory _rewards) = projectedEarnings(msg.sender);
         eurosFees -= _euros;
         if (_compound) {
@@ -189,31 +189,31 @@ contract Staking is Ownable, IStaking {
         } else {
             IERC20(EUROs).safeTransfer(msg.sender, _euros);
         }
-        savePosition(_position);
-        claimRewards(msg.sender, _rewards);
+        _savePosition(_position);
+        _claimRewards(msg.sender, _rewards);
     }
 
     function claim(bool _compound) external {
         IRewardGateway(rewardGateway).dropFees();
         Position memory _position = positions[msg.sender];
-        if (daysStaked(_position) == 0) revert InvalidRequest();
-        runClaim(_position, _compound);
+        if (_daysStaked(_position) == 0) revert InvalidRequest();
+        _runClaim(_position, _compound);
         emit RewardsClaimed(msg.sender);
     }
 
     function projectedEarnings(address _holder) public view returns (uint256 _EUROs, Reward[] memory _rewards) {
         Position memory _position = positions[_holder];
-        _EUROs = calculateEUROs(_position);
+        _EUROs = _calculateEUROs(_position);
         uint256 _totalEUROs = IERC20(EUROs).balanceOf(address(this));
-        uint256 _totalDays = totalDays();
+        uint256 _totalDays = _totalDays();
         
         _rewards = new Reward[](rewardTokens.length);
         for (uint256 i = 0; i < rewardTokens.length; i++) {
             address _rewardToken = rewardTokens[i];
             _rewards[i].token = _rewardToken;
-            _rewards[i].amount = calculateReward(
+            _rewards[i].amount = _calculateReward(
                 _rewardToken, _position.EUROs + _EUROs,
-                daysStaked(_position), _totalEUROs, _totalDays
+                _daysStaked(_position), _totalEUROs, _totalDays
             );
         }
     }
