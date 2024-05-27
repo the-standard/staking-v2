@@ -36,6 +36,7 @@ contract Staking is Ownable, IStaking {
     }
 
     function totalDays() private view returns (uint256) {
+        if (start == 0) return 0;
         return (block.timestamp - start) / 1 days;
     }
 
