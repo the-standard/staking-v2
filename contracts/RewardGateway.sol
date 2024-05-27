@@ -33,7 +33,7 @@ contract RewardGateway is IRewardGateway, AccessControl {
     function dropFees() public {
         uint256 _balance = IERC20(euros).balanceOf(address(this));
         if (_balance > 0) {
-            IERC20(euros).approve(staking, _balance);
+            IERC20(euros).forceApprove(staking, _balance);
             IStaking(staking).dropFees(euros, _balance);
         }
 
@@ -46,7 +46,7 @@ contract RewardGateway is IRewardGateway, AccessControl {
             } else {
                 _balance = IERC20(_token.addr).balanceOf(address(this));
                 if (_balance > 0) {
-                    IERC20(_token.addr).approve(staking, _balance);
+                    IERC20(_token.addr).forceApprove(staking, _balance);
                     IStaking(staking).dropFees(_token.addr, _balance);
                 }
             }
@@ -56,7 +56,7 @@ contract RewardGateway is IRewardGateway, AccessControl {
     function airdropToken(address _token, uint256 _amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (_amount > 0) {
             IERC20(_token).transferFrom(msg.sender, address(this), _amount);
-            IERC20(_token).approve(staking, _amount);
+            IERC20(_token).forceApprove(staking, _amount);
             IStaking(staking).dropFees(_token, _amount);
         }
     }
