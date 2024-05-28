@@ -95,9 +95,7 @@ contract Staking is Ownable, IStaking, ReentrancyGuard {
     }
 
     function _deleteIndexFromStarts(uint256 _index) private {
-        for (uint256 i = _index; i < starts.length - 1; i++) {
-            starts[i] = starts[i+1];
-        }
+        starts[_index] = starts[starts.length - 1];
         starts.pop();
     }
 
