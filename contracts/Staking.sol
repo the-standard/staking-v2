@@ -133,7 +133,7 @@ contract Staking is Ownable, IStaking, ReentrancyGuard {
         if (start == _previousStart || start == 0) start = _earliestStart();
     }
 
-    function increaseStake(uint256 _tst, uint256 _euros) external {
+    function increaseStake(uint256 _tst, uint256 _euros) external nonReentrant() {
         IRewardGateway(rewardGateway).dropFees();
 
         if (_tst == 0 && _euros == 0) revert InvalidRequest();
@@ -148,7 +148,7 @@ contract Staking is Ownable, IStaking, ReentrancyGuard {
         emit StakeIncreased(msg.sender, _tst, _euros);
     }
 
-    function decreaseStake(uint256 _tst, uint256 _euros) external {
+    function decreaseStake(uint256 _tst, uint256 _euros) external nonReentrant() {
         IRewardGateway(rewardGateway).dropFees();
         Position memory _position = positions[msg.sender];
         _runClaim(_position, false);
@@ -168,7 +168,7 @@ contract Staking is Ownable, IStaking, ReentrancyGuard {
         return (block.timestamp - _position.start) / 1 days;
     }
 
-    function _claimRewards(address _holder, Reward[] memory _rewards) private nonReentrant() {
+    function _claimRewards(address _holder, Reward[] memory _rewards) private {
         for (uint256 i = 0; i < _rewards.length; i++) {
             Reward memory _reward = _rewards[i];
             if (_reward.token == address(0)) {
@@ -192,7 +192,7 @@ contract Staking is Ownable, IStaking, ReentrancyGuard {
         _claimRewards(msg.sender, _rewards);
     }
 
-    function claim(bool _compound) external {
+    function claim(bool _compound) external nonReentrant() {
         IRewardGateway(rewardGateway).dropFees();
         Position memory _position = positions[msg.sender];
         if (_daysStaked(_position) == 0) revert InvalidRequest();
