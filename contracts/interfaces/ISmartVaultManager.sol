@@ -11,4 +11,5 @@ interface ISmartVaultManager {
 
     function vaultData(uint256 _tokenID) external view returns (SmartVaultData memory);
     function liquidateVault(uint256 _tokenId) external;
+    function totalSupply() external view returns (uint256);
 }

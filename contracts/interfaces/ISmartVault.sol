@@ -9,4 +9,6 @@ interface ISmartVault {
         address vaultAddress; uint256 minted; uint256 maxMintable; uint256 totalCollateralValue;
         Asset[] collateral; bool liquidated; uint8 version; bytes32 vaultType;
     }
+    
+    function undercollateralised() external view returns (bool);
 }
