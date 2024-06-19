@@ -42,4 +42,6 @@ contract MockSmartVaultManager is ISmartVaultManager {
         }
     }
 
+    function totalSupply() external view returns (uint256) {
+    }
 }
