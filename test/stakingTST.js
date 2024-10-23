@@ -184,7 +184,7 @@ describe('StakingTST', async () => {
 
       yield = await Staking.dailyYield();
       expect(yield).to.have.length(2);
-      // 4 days, 500 TST, 24 EUROs
+      // 4 days, 500 TST, 24 USDs
       expect(yield[0].amount).to.equal(ethers.utils.parseEther('0.012'))
       // 4 days, 500 TST, 0.01 ETH
       expect(yield[1].token).to.equal(ethers.constants.AddressZero);
@@ -224,23 +224,23 @@ describe('StakingTST', async () => {
 
       yield = await Staking.dailyYield();
       expect(yield).to.have.length(4);
-      // 10 days, 500 TST, 74 EUROs
+      // 10 days, 500 TST, 74 USDs
       expect(yield[0].token).to.equal(USDs.address)
       expect(yield[0].amount).to.equal(ethers.utils.parseEther('0.0148'))
-      // 10 days, 500 euros, 0.04 ETH
+      // 10 days, 500 TST, 0.04 ETH
       expect(yield[1].token).to.equal(ethers.constants.AddressZero);
       expect(yield[1].amount).to.equal(ethers.utils.parseEther('0.000008'));
-      // 10 days, 500 euros, 10 USD
+      // 10 days, 500 TST, 10 USD
       expect(yield[2].token).to.equal(RewardToken6Dec.address);
       expect(yield[2].amount).to.equal(ethers.utils.parseUnits('0.002', 6));
-      // 10 days, 500 euros, 20 airdrop reward tokens
+      // 10 days, 500 TST, 20 airdrop reward tokens
       expect(yield[3].token).to.equal(UnofficialRewardToken.address);
       expect(yield[3].amount).to.equal(ethers.utils.parseEther('0.004'));
     });
   });
 
   describe('increaseStake', async () => {
-    it('increases the stake of TST and EUROs', async () => {
+    it('increases the stake of TST', async () => {
       let position = await Staking.positions(user1.address);
       expect(position.TST).to.equal(0);
 
@@ -560,7 +560,7 @@ describe('StakingTST', async () => {
 
       // 1 day staked by user, 1 day total, 50% of TST staked, 5 USDs remaining
       expect((await Staking.projectedEarnings(user1.address))[0].amount).to.equal(usdsFees.div(4));
-      // their 50% of euros fees is already claimed
+      // their 50% of usds fees is already claimed
       expect((await Staking.projectedEarnings(user2.address))[0].amount).to.equal(0);
       expect(await USDs.balanceOf(user2.address)).to.equal(usdsFees.div(2));
     });
