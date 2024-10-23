@@ -306,7 +306,7 @@ describe('StakingTST', async () => {
       expect((await Staking.projectedEarnings(user2.address))[0].amount).to.equal(0);
     });
 
-    it('automatically claims when increasing, compounding', async () => {
+    it('automatically claims when increasing', async () => {
       const tstStake = ethers.utils.parseEther('10000');
       await TST.mint(user1.address, tstStake.mul(2));
       await TST.connect(user1).approve(Staking.address, tstStake.mul(2));
@@ -394,28 +394,27 @@ describe('StakingTST', async () => {
       expect((await Staking.projectedEarnings(user2.address))[0].amount).to.equal(0);
     });
 
-    it('automatically claims when decreasing, not compounding', async () => {
+    it('automatically claims when decreasing', async () => {
       const tstStake = ethers.utils.parseEther('10000');
       await TST.mint(user1.address, tstStake);
       await TST.connect(user1).approve(Staking.address, tstStake);
-      await Staking.connect(user1).increaseStake(tstStake, 0);
+      await Staking.connect(user1).increaseStake(tstStake);
 
-      const usdFees = 1000000;
-      const eurosFees = ethers.utils.parseEther('15');
+      const usdFees = ethers.utils.parseUnits('1', 6);
+      const usdsFees = ethers.utils.parseEther('15');
       await RewardToken6Dec.mint(RewardGateway.address, usdFees);
-      await EUROs.mint(RewardGateway.address, eurosFees);
+      await USDs.mint(RewardGateway.address, usdsFees);
 
       await fastForward(DAY);
 
-      await Staking.connect(user1).decreaseStake(tstStake.div(2), 0);
+      await Staking.connect(user1).decreaseStake(tstStake.div(2));
 
       const position = await Staking.positions(user1.address);
       expect(position.TST).to.equal(tstStake.div(2));
-      expect(position.EUROs).to.equal(0);
       const projected = await Staking.projectedEarnings(user1.address);
-      expect(projected._EUROs).to.equal(0);
-      expect(projected._rewards[0].amount).to.equal(0);
-      expect(await EUROs.balanceOf(user1.address)).to.equal(eurosFees);
+      expect(projected[0].amount).to.equal(0);
+      expect(projected[1].amount).to.equal(0);
+      expect(await USDs.balanceOf(user1.address)).to.equal(usdsFees);
       expect(await RewardToken6Dec.balanceOf(user1.address)).to.equal(usdFees);
     });
   });
