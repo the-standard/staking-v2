@@ -515,31 +515,30 @@ describe('StakingTST', async () => {
 
     it('restarts the user stake', async () => {
       const fees = ethers.utils.parseEther('20');
-      await EUROs.mint(RewardGateway.address, fees)
+      await USDs.mint(RewardGateway.address, fees)
       await RewardGateway.dropFees();
 
       let tstStake = ethers.utils.parseEther('100');
       await TST.mint(user1.address, tstStake);
       await TST.connect(user1).approve(Staking.address, tstStake);
-      let stake = await Staking.connect(user1).increaseStake(tstStake, 0);
+      let stake = await Staking.connect(user1).increaseStake(tstStake);
       const ts1 = (await ethers.provider.getBlock(stake.blockNumber)).timestamp;
 
       await fastForward(DAY);
 
-      const eurosStake = ethers.utils.parseEther('20');
       await TST.mint(user2.address, tstStake.mul(2));
       await TST.connect(user2).approve(Staking.address, tstStake.mul(2));
-      stake = await Staking.connect(user2).increaseStake(tstStake.mul(2), 0);
+      stake = await Staking.connect(user2).increaseStake(tstStake.mul(2));
       const ts2 = (await ethers.provider.getBlock(stake.blockNumber)).timestamp;
       
       await fastForward(DAY);
 
       expect(await Staking.start()).to.equal(ts1);
 
-      await Staking.connect(user1).claim(false);
+      await Staking.connect(user1).claim();
       expect(await Staking.start()).to.equal(ts2);
 
-      expect((await Staking.projectedEarnings(user1.address))._EUROs).to.equal(0);
+      expect((await Staking.projectedEarnings(user1.address))[0].amount).to.equal(0);
     });
 
     it('triggers dropping of fees', async () => {
