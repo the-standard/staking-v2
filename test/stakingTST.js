@@ -545,51 +545,24 @@ describe('StakingTST', async () => {
       const tstStake = ethers.utils.parseEther('10000');
       await TST.mint(user1.address, tstStake);
       await TST.connect(user1).approve(Staking.address, tstStake);
-      await Staking.connect(user1).increaseStake(tstStake, 0);
+      await Staking.connect(user1).increaseStake(tstStake);
       
       await TST.mint(user2.address, tstStake);
       await TST.connect(user2).approve(Staking.address, tstStake);
-      await Staking.connect(user2).increaseStake(tstStake, 0);
+      await Staking.connect(user2).increaseStake(tstStake);
 
       await fastForward(DAY);
 
-      const eurosFees = ethers.utils.parseEther('10');
-      await EUROs.mint(RewardGateway.address, eurosFees);
+      const usdsFees = ethers.utils.parseEther('10');
+      await USDs.mint(RewardGateway.address, usdsFees);
 
-      await Staking.connect(user2).claim(false);
+      await Staking.connect(user2).claim();
 
-      // 1 day staked by user, 1 day total, 50% of TST staked, 5 EUROs remaining
-      expect((await Staking.projectedEarnings(user1.address))._EUROs).to.equal(eurosFees.div(4));
+      // 1 day staked by user, 1 day total, 50% of TST staked, 5 USDs remaining
+      expect((await Staking.projectedEarnings(user1.address))[0].amount).to.equal(usdsFees.div(4));
       // their 50% of euros fees is already claimed
-      expect((await Staking.projectedEarnings(user2.address))._EUROs).to.equal(0);
-      expect(await EUROs.balanceOf(user2.address)).to.equal(eurosFees.div(2));
-    });
-
-    it('has option to compound EUROs when claiming', async () => {
-      const tstStake = ethers.utils.parseEther('20000');
-      const eurosStake = ethers.utils.parseEther('300');
-      await TST.mint(user1.address, tstStake);
-      await TST.connect(user1).approve(Staking.address, tstStake);
-      await EUROs.mint(user1.address, eurosStake);
-      await EUROs.connect(user1).approve(Staking.address, eurosStake);
-      await Staking.connect(user1).increaseStake(tstStake, eurosStake);
-
-      await TST.mint(user2.address, tstStake);
-      await TST.connect(user2).approve(Staking.address, tstStake);
-      await Staking.connect(user2).increaseStake(tstStake, 0);
-
-      const eurosFees = ethers.utils.parseEther('10');
-      await EUROs.mint(RewardGateway.address, eurosFees);
-
-      await fastForward(DAY);
-
-      await Staking.connect(user1).claim(true);
-
-      expect(await EUROs.balanceOf(user1.address)).to.equal(0);
-
-      const position = await Staking.positions(user1.address);
-      expect(position.EUROs).to.equal(eurosStake.add(eurosFees.div(2)));
-
+      expect((await Staking.projectedEarnings(user2.address))[0].amount).to.equal(0);
+      expect(await USDs.balanceOf(user2.address)).to.equal(usdsFees.div(2));
     });
   });
 
