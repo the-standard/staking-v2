@@ -569,58 +569,50 @@ describe('StakingTST', async () => {
   describe('dropFees', async () => {
     it('adds fees to the staking pool, using reward gateway', async () => {
       const tstStake = ethers.utils.parseEther('100000');
-      const eurosStake = ethers.utils.parseEther('100');
       await TST.mint(user1.address, tstStake);
       await TST.connect(user1).approve(Staking.address, tstStake);
-      await EUROs.mint(user1.address, eurosStake);
-      await EUROs.connect(user1).approve(Staking.address, eurosStake);
-      await Staking.connect(user1).increaseStake(tstStake, eurosStake);
+      await Staking.connect(user1).increaseStake(tstStake);
 
-      await TST.mint(user2.address, tstStake);
-      await TST.connect(user2).approve(Staking.address, tstStake);
-      await EUROs.mint(user2.address, eurosStake.mul(3));
-      await EUROs.connect(user2).approve(Staking.address, eurosStake.mul(3));
-      await Staking.connect(user2).increaseStake(tstStake, eurosStake.mul(3));
+      await TST.mint(user2.address, tstStake.mul(3));
+      await TST.connect(user2).approve(Staking.address, tstStake.mul(3));
+      await Staking.connect(user2).increaseStake(tstStake.mul(3));
 
       await fastForward(DAY);
 
-      const eurosFees = ethers.utils.parseEther('3');
+      const usdsFees = ethers.utils.parseEther('3');
       const ethFees = ethers.utils.parseEther('0.0005');
       const dec18Fees = ethers.utils.parseEther('7');
-      const dec6Fees = 8000000;
+      const dec6Fees = ethers.utils.parseUnits('8', 6);
+      
+      // all fees should be based on TST stake
 
-      await EUROs.mint(RewardGateway.address, eurosFees);
+      // -- usds fees --
+
+      await USDs.mint(RewardGateway.address, usdsFees);
       await RewardGateway.dropFees();
-      expect(await EUROs.balanceOf(Staking.address)).to.equal(eurosStake.mul(4).add(eurosFees));
+      expect(await USDs.balanceOf(Staking.address)).to.equal(usdsFees);
 
       let projectedEarnings = await Staking.projectedEarnings(user1.address);
-      expect(projectedEarnings._EUROs).to.equal(eurosFees.div(2));
+      expect(projectedEarnings[0].amount).to.equal(usdsFees.div(4));
 
       projectedEarnings = await Staking.projectedEarnings(user2.address);
-      expect(projectedEarnings._EUROs).to.equal(eurosFees.div(2));
+      expect(projectedEarnings[0].amount).to.equal(usdsFees.mul(3).div(4));
 
-      // all other fees should be based on EUROs stake
       // -- eth fees --
 
       await admin.sendTransaction({to: RewardGateway.address, value: ethFees});
       await RewardGateway.dropFees();
       expect(await ethers.provider.getBalance(Staking.address)).to.equal(ethFees);
 
-      const totalEurosInPool = eurosStake.mul(4).add(eurosFees);
-
       projectedEarnings = await Staking.projectedEarnings(user1.address);
-      expect(projectedEarnings._rewards).to.have.length(1);
-      expect(projectedEarnings._rewards[0].token).to.equal(ethers.constants.AddressZero);
-      let eurosInPosition = eurosStake.add(eurosFees.div(2));
-      let estimatedFees = eurosInPosition.mul(ethFees).div(totalEurosInPool);
-      expect(projectedEarnings._rewards[0].amount).to.equal(estimatedFees);
+      expect(projectedEarnings).to.have.length(2);
+      expect(projectedEarnings[1].token).to.equal(ethers.constants.AddressZero);
+      expect(projectedEarnings[1].amount).to.equal(ethFees.div(4));
 
       projectedEarnings = await Staking.projectedEarnings(user2.address);
-      expect(projectedEarnings._rewards).to.have.length(1);
-      expect(projectedEarnings._rewards[0].token).to.equal(ethers.constants.AddressZero);
-      eurosInPosition = eurosStake.mul(3).add(eurosFees.div(2));
-      estimatedFees = eurosInPosition.mul(ethFees).div(totalEurosInPool);
-      expect(projectedEarnings._rewards[0].amount).to.equal(estimatedFees);
+      expect(projectedEarnings).to.have.length(2);
+      expect(projectedEarnings[1].token).to.equal(ethers.constants.AddressZero);
+      expect(projectedEarnings[1].amount).to.equal(ethFees.mul(3).div(4));
 
       // -- 18 dec erc20 fees --
 
@@ -629,18 +621,14 @@ describe('StakingTST', async () => {
       expect(await RewardToken18Dec.balanceOf(Staking.address)).to.equal(dec18Fees);
 
       projectedEarnings = await Staking.projectedEarnings(user1.address);
-      expect(projectedEarnings._rewards).to.have.length(2);
-      expect(projectedEarnings._rewards[1].token).to.equal(RewardToken18Dec.address);
-      eurosInPosition = eurosStake.add(eurosFees.div(2));
-      estimatedFees = eurosInPosition.mul(dec18Fees).div(totalEurosInPool);
-      expect(projectedEarnings._rewards[1].amount).to.equal(estimatedFees);
+      expect(projectedEarnings).to.have.length(3);
+      expect(projectedEarnings[2].token).to.equal(RewardToken18Dec.address);
+      expect(projectedEarnings[2].amount).to.equal(dec18Fees.div(4));
 
       projectedEarnings = await Staking.projectedEarnings(user2.address);
-      expect(projectedEarnings._rewards).to.have.length(2);
-      expect(projectedEarnings._rewards[1].token).to.equal(RewardToken18Dec.address);
-      eurosInPosition = eurosStake.mul(3).add(eurosFees.div(2));
-      estimatedFees = eurosInPosition.mul(dec18Fees).div(totalEurosInPool);
-      expect(projectedEarnings._rewards[1].amount).to.equal(estimatedFees);
+      expect(projectedEarnings).to.have.length(3);
+      expect(projectedEarnings[2].token).to.equal(RewardToken18Dec.address);
+      expect(projectedEarnings[2].amount).to.equal(dec18Fees.mul(3).div(4));
 
       // -- 6 dec erc20 fees --
 
@@ -649,18 +637,14 @@ describe('StakingTST', async () => {
       expect(await RewardToken6Dec.balanceOf(Staking.address)).to.equal(dec6Fees);
 
       projectedEarnings = await Staking.projectedEarnings(user1.address);
-      expect(projectedEarnings._rewards).to.have.length(3);
-      expect(projectedEarnings._rewards[2].token).to.equal(RewardToken6Dec.address);
-      eurosInPosition = eurosStake.add(eurosFees.div(2));
-      estimatedFees = eurosInPosition.mul(dec6Fees).div(totalEurosInPool);
-      expect(projectedEarnings._rewards[2].amount).to.equal(estimatedFees);
+      expect(projectedEarnings).to.have.length(4);
+      expect(projectedEarnings[3].token).to.equal(RewardToken6Dec.address);
+      expect(projectedEarnings[3].amount).to.equal(dec6Fees.div(4));
 
       projectedEarnings = await Staking.projectedEarnings(user2.address);
-      expect(projectedEarnings._rewards).to.have.length(3);
-      expect(projectedEarnings._rewards[2].token).to.equal(RewardToken6Dec.address);
-      eurosInPosition = eurosStake.mul(3).add(eurosFees.div(2));
-      estimatedFees = eurosInPosition.mul(dec6Fees).div(totalEurosInPool);
-      expect(projectedEarnings._rewards[2].amount).to.equal(estimatedFees);
+      expect(projectedEarnings).to.have.length(4);
+      expect(projectedEarnings[3].token).to.equal(RewardToken6Dec.address);
+      expect(projectedEarnings[3].amount).to.equal(dec6Fees.mul(3).div(4));
 
       // -- more eth --
 
@@ -669,29 +653,25 @@ describe('StakingTST', async () => {
       expect(await ethers.provider.getBalance(Staking.address)).to.equal(ethFees.mul(2));
 
       projectedEarnings = await Staking.projectedEarnings(user1.address);
-      expect(projectedEarnings._rewards).to.have.length(3);
-      expect(projectedEarnings._rewards[0].token).to.equal(ethers.constants.AddressZero);
-      eurosInPosition = eurosStake.add(eurosFees.div(2));
-      estimatedFees = eurosInPosition.mul(ethFees.mul(2)).div(totalEurosInPool);
-      expect(projectedEarnings._rewards[0].amount).to.equal(estimatedFees);
+      expect(projectedEarnings).to.have.length(4);
+      expect(projectedEarnings[1].token).to.equal(ethers.constants.AddressZero);
+      expect(projectedEarnings[1].amount).to.equal(ethFees.mul(2).div(4));
 
       projectedEarnings = await Staking.projectedEarnings(user2.address);
-      expect(projectedEarnings._rewards).to.have.length(3);
-      expect(projectedEarnings._rewards[0].token).to.equal(ethers.constants.AddressZero);
-      eurosInPosition = eurosStake.mul(3).add(eurosFees.div(2));
-      estimatedFees = eurosInPosition.mul(ethFees.mul(2)).div(totalEurosInPool);
-      expect(projectedEarnings._rewards[0].amount).to.equal(estimatedFees);
+      expect(projectedEarnings).to.have.length(4);
+      expect(projectedEarnings[1].token).to.equal(ethers.constants.AddressZero);
+      expect(projectedEarnings[1].amount).to.equal(ethFees.mul(3).mul(2).div(4));
     });
 
     it('allows any token to be dropped on staking pool', async () => {
-      const eurosStake = ethers.utils.parseEther('100');
-      await EUROs.mint(user1.address, eurosStake);
-      await EUROs.connect(user1).approve(Staking.address, eurosStake);
-      await Staking.connect(user1).increaseStake(0, eurosStake);
+      const tstStake = ethers.utils.parseEther('100');
+      await TST.mint(user1.address, tstStake);
+      await TST.connect(user1).approve(Staking.address, tstStake);
+      await Staking.connect(user1).increaseStake(tstStake);
 
-      await EUROs.mint(user2.address, eurosStake.mul(2));
-      await EUROs.connect(user2).approve(Staking.address, eurosStake.mul(2));
-      await Staking.connect(user2).increaseStake(0, eurosStake.mul(2));
+      await TST.mint(user2.address, tstStake.mul(2));
+      await TST.connect(user2).approve(Staking.address, tstStake.mul(2));
+      await Staking.connect(user2).increaseStake(tstStake.mul(2));
 
       await fastForward(DAY);
 
@@ -702,16 +682,14 @@ describe('StakingTST', async () => {
       expect(await UnofficialRewardToken.balanceOf(Staking.address)).to.equal(airdropAmount);
 
       let projectedEarnings = await Staking.projectedEarnings(user1.address);
-      expect(projectedEarnings._rewards).to.have.length(1);
-      expect(projectedEarnings._rewards[0].token).to.equal(UnofficialRewardToken.address);
-      let estimatedFees = eurosStake.mul(airdropAmount).div(eurosStake.mul(3));
-      expect(projectedEarnings._rewards[0].amount).to.equal(estimatedFees);
+      expect(projectedEarnings).to.have.length(1);
+      expect(projectedEarnings[0].token).to.equal(UnofficialRewardToken.address);
+      expect(projectedEarnings[0].amount).to.equal(airdropAmount.div(3));
 
       projectedEarnings = await Staking.projectedEarnings(user2.address);
-      expect(projectedEarnings._rewards).to.have.length(1);
-      expect(projectedEarnings._rewards[0].token).to.equal(UnofficialRewardToken.address);
-      estimatedFees = eurosStake.mul(2).mul(airdropAmount).div(eurosStake.mul(3));
-      expect(projectedEarnings._rewards[0].amount).to.equal(estimatedFees);
+      expect(projectedEarnings).to.have.length(1);
+      expect(projectedEarnings[0].token).to.equal(UnofficialRewardToken.address);
+      expect(projectedEarnings[0].amount).to.equal(airdropAmount.mul(2).div(3));
     });
   });
 
