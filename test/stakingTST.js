@@ -240,7 +240,7 @@ describe('StakingTST', async () => {
   });
 
   describe('increaseStake', async () => {
-    it.only('increases the stake of TST and EUROs', async () => {
+    it('increases the stake of TST and EUROs', async () => {
       let position = await Staking.positions(user1.address);
       expect(position.TST).to.equal(0);
 
@@ -271,15 +271,14 @@ describe('StakingTST', async () => {
       const tstStake = ethers.utils.parseEther('10000');
       await TST.mint(user1.address, tstStake);
       await TST.connect(user1).approve(Staking.address, tstStake);
-      let increase = await Staking.connect(user1).increaseStake(tstStake, 0);
+      let increase = await Staking.connect(user1).increaseStake(tstStake);
 
       position = await Staking.positions(user1.address);
       expect(position.start).to.equal((await ethers.provider.getBlock(increase.blockNumber)).timestamp);
-
-      const eurosStake = ethers.utils.parseEther('100');
-      await EUROs.mint(user1.address, eurosStake);
-      await EUROs.connect(user1).approve(Staking.address, eurosStake);
-      increase = await Staking.connect(user1).increaseStake(0, eurosStake);
+      
+      await TST.mint(user1.address, tstStake);
+      await TST.connect(user1).approve(Staking.address, tstStake);
+      increase = await Staking.connect(user1).increaseStake(tstStake);
 
       position = await Staking.positions(user1.address);
       expect(position.start).to.equal((await ethers.provider.getBlock(increase.blockNumber)).timestamp);
