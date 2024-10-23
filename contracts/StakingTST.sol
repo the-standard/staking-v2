@@ -14,7 +14,6 @@ contract StakingTST is Ownable, IStaking, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     address private immutable TST;
-    address private immutable EUROs;
 
     uint256 public start;
     mapping(address => Position) public positions;
@@ -32,9 +31,8 @@ contract StakingTST is Ownable, IStaking, ReentrancyGuard {
 
     error InvalidRequest();
 
-    constructor(address _tst, address _euros) Ownable(msg.sender) {
+    constructor(address _tst) Ownable(msg.sender) {
         TST = _tst;
-        EUROs = _euros;
     }
 
     modifier onlyGateway {
@@ -47,21 +45,12 @@ contract StakingTST is Ownable, IStaking, ReentrancyGuard {
         return (block.timestamp - start) / 1 days;
     }
 
-    function _calculateEUROs(Position memory _position) private view returns (uint256) {
-        uint256 _totalDays = _totalDays();
-        uint256 _balance = IERC20(TST).balanceOf(address(this));
-        if (_totalDays > 0 && _balance > 0) {
-            return _position.TST * _daysStaked(_position) * eurosFees
-                / _balance / _totalDays;
-        }
-    }
-
-    function _calculateReward(address _token, uint256 _euros, uint256 _days, uint256 _totalEUROs, uint256 _totalDays) private view returns (uint256) {
+    function _calculateReward(address _token, uint256 _tst, uint256 _days, uint256 _totalTST, uint256 _totalDays) private view returns (uint256) {
         uint256 _balance = _token == address(0) ?
             address(this).balance :
             IERC20(_token).balanceOf(address(this));
-        if (_totalEUROs > 0 && _totalDays > 0)
-            return _euros * _days * _balance / _totalEUROs / _totalDays;
+        if (_totalTST > 0 && _totalDays > 0)
+            return _tst * _days * _balance / _totalTST / _totalDays;
     }
 
     function dailyYield() external view returns (Reward[] memory _rewards) {
