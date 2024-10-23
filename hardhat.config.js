@@ -17,8 +17,15 @@ module.exports = {
     arbitrum_sepolia: {
       url: `https://arb-sepolia.g.alchemy.com/v2/${ALCHEMY_ARBITRUM_SEPOLIA_KEY}`,
       accounts: [TEST_ACCOUNT_PRIVATE_KEY]
-    }
+    },
+    // hardhat: {
+    //   forking: {
+    //     url: `https://arb-mainnet.g.alchemy.com/v2/${ALCHEMY_ARBITRUM_KEY}`,
+    //     blockNumber: 213854112
+    //   }
+    // }
   },
+  
   etherscan: {
     apiKey: {
       arbitrumOne: ARBISCAN_KEY,
