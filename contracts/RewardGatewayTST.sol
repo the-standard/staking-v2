@@ -14,14 +14,12 @@ contract RewardGatewayTST is IRewardGatewayTST, AccessControl {
     address immutable private staking;
     address immutable private USDs;
     address immutable private tokenManager;
-    address immutable private smartVaultManager;
     
-    constructor(address _staking, address _USDs, address _tokenManager, address _smartVaultManager) {
+    constructor(address _staking, address _USDs, address _tokenManager) {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         staking = _staking;
         USDs = _USDs;
         tokenManager = _tokenManager;
-        smartVaultManager = _smartVaultManager;
     }
 
     receive() external payable {}
