@@ -27,7 +27,7 @@ describe('StakingTST', async () => {
       [RewardToken18Dec.address, RewardToken6Dec.address]
     );
     RewardGateway = await (await ethers.getContractFactory('RewardGatewayTST')).deploy(
-      Staking.address, USDs.address, MockTokenManager.address, ethers.constants.AddressZero
+      Staking.address, USDs.address, MockTokenManager.address
     );
     await Staking.setRewardGateway(RewardGateway.address);
   });
