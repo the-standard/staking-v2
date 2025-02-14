@@ -348,6 +348,8 @@ describe('StakingTST', async () => {
       let position = await Staking.positions(user1.address);
       expect(position.TST).to.equal(tstStake);
 
+      await fastForward(100 * DAY);
+
       await expect(Staking.connect(user1).decreaseStake(tstStake.add(1))).to.be.revertedWithCustomError(Staking, 'InvalidRequest');
 
       await expect(Staking.connect(user1).decreaseStake(tstStake)).not.to.be.reverted;
@@ -365,10 +367,14 @@ describe('StakingTST', async () => {
       await TST.connect(user1).approve(Staking.address, tstStake);
       await Staking.connect(user1).increaseStake(tstStake);
 
+      await fastForward(100 * DAY);
+
       let decrease = await Staking.connect(user1).decreaseStake(tstStake.div(2))
 
       position = await Staking.positions(user1.address);
       expect(position.start).to.equal((await ethers.provider.getBlock(decrease.blockNumber)).timestamp);
+
+      await fastForward(100 * DAY);
 
       decrease = await Staking.connect(user1).decreaseStake(tstStake.div(2))
 
@@ -391,6 +397,8 @@ describe('StakingTST', async () => {
       const usdsFees = ethers.utils.parseEther('10');
       await USDs.mint(RewardGateway.address, usdsFees);
 
+      await fastForward(100 * DAY);
+
       await Staking.connect(user2).decreaseStake(tstStake);
 
       // fees dropped but half sent to user2 during decrease
@@ -412,8 +420,7 @@ describe('StakingTST', async () => {
       await RewardToken6Dec.mint(RewardGateway.address, usdFees);
       await USDs.mint(RewardGateway.address, usdsFees);
 
-      await fastForward(DAY);
-
+      await fastForward(100 * DAY);
       await Staking.connect(user1).decreaseStake(tstStake.div(2));
 
       const position = await Staking.positions(user1.address);
