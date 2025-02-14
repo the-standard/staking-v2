@@ -10,8 +10,6 @@ import "contracts/interfaces/ISmartVaultIndex.sol";
 import "contracts/interfaces/ISmartVaultManager.sol";
 import "contracts/interfaces/ISmartVault.sol";
 
-import "hardhat/console.sol";
-
 contract LiquidationAutomation is AutomationCompatibleInterface, Ownable {
     using SafeERC20 for IERC20;
 

@@ -8,8 +8,6 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "contracts/interfaces/IRewardGateway.sol";
 import "contracts/interfaces/IStaking.sol";
 
-import "hardhat/console.sol";
-
 contract StakingTST is Ownable, IStaking, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
