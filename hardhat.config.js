@@ -20,8 +20,7 @@ module.exports = {
     },
     // hardhat: {
     //   forking: {
-    //     url: `https://arb-mainnet.g.alchemy.com/v2/${ALCHEMY_ARBITRUM_KEY}`,
-    //     blockNumber: 213854112
+    //     url: `https://arb-mainnet.g.alchemy.com/v2/${ALCHEMY_ARBITRUM_KEY}`
     //   }
     // }
   },
