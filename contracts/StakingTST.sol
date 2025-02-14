@@ -28,6 +28,7 @@ contract StakingTST is Ownable, IStaking, ReentrancyGuard {
     event RewardsClaimed (address indexed holder);
 
     error InvalidRequest();
+    error MinimumStakingPeriodError();
 
     constructor(address _tst) Ownable(msg.sender) {
         TST = _tst;
@@ -129,6 +130,8 @@ contract StakingTST is Ownable, IStaking, ReentrancyGuard {
     function decreaseStake(uint256 _tst) external nonReentrant() {
         IRewardGateway(rewardGateway).dropFees();
         Position memory _position = positions[msg.sender];
+        if (block.timestamp - _position.start < 90 days) revert MinimumStakingPeriodError();
+
         _runClaim(_position);
 
         if (_tst > _position.TST) revert InvalidRequest();
